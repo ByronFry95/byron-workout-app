@@ -1,7 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import './WorkoutTimer.css'
+import { useEffect, useState } from 'react'
 
 const formatDuration = (ms) => {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000))
@@ -38,23 +37,21 @@ export default function WorkoutTimer({ session, onStartDay, onEndDay }) {
   const isRunning = Boolean(session?.startedAt && !session?.endedAt)
 
   return (
-    <div className="workout-timer">
-      <div className="timer-header">
-        <span className="timer-label">Workout Timer</span>
-        <span className={`timer-status ${isRunning ? 'running' : ''}`}>
+    <div className="bg-dark-blue mb-6 rounded-2xl p-5 text-white shadow-card">
+      <div className="mb-2 flex items-center justify-between">
+        <span className="text-[0.7rem] uppercase tracking-[0.08em] text-slate-300">Workout Timer</span>
+        <span className={`rounded-full px-2.5 py-1 text-[0.72rem] font-bold ${isRunning ? 'bg-emerald-500/20 text-emerald-200' : 'bg-white/10 text-slate-200'}`}>
           {isRunning ? 'In Progress' : 'Ready'}
         </span>
       </div>
 
-      <div className="timer-display">{formatDuration(elapsedMs)}</div>
+      <div className="my-2 text-4xl font-bold tracking-[0.06em] tabular-nums sm:text-5xl">
+        {formatDuration(elapsedMs)}
+      </div>
 
-      <div className="timer-actions">
-        {!isRunning ? (
-          <button className="start-day-btn" onClick={onStartDay}>
-            Start Day
-          </button>
-        ) : (
-          <button className="end-day-btn" onClick={onEndDay}>
+      <div className="flex justify-end">
+        {isRunning && (
+          <button className="rounded-xl bg-amber-400 px-4 py-2.5 font-bold text-slate-900 transition-transform duration-200 hover:-translate-y-0.5" onClick={onEndDay}>
             End Day
           </button>
         )}
