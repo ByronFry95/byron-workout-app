@@ -66,7 +66,6 @@ The app is ready to deploy to Vercel:
 
 ## Future Enhancements
 
-- Firebase integration for cloud sync
 - Mobile app responsiveness improvements
 - Export workout data to CSV
 - Progress charts and analytics
