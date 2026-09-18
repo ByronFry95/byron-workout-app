@@ -1,0 +1,344 @@
+.exercise {
+  background-color: #fafafa;
+  border-left: 4px solid #007bff;
+  padding: 15px;
+  border-radius: 4px;
+  position: relative;
+}
+
+.exercise.exercise-started {
+  background-color: #e8f5e9;
+  border-left-color: #28a745;
+}
+
+.exercise-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  gap: 10px;
+}
+
+.exercise-name {
+  margin: 0;
+  font-size: 18px;
+  color: #333;
+  cursor: pointer;
+  flex: 1;
+  padding: 5px;
+  border-radius: 3px;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.exercise-name:hover {
+  background-color: #e8e8e8;
+}
+
+.in-progress-badge {
+  display: inline-block;
+  background-color: #28a745;
+  color: white;
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: default;
+}
+
+.increase-badge {
+  display: inline-block;
+  background-color: #ff9800;
+  color: white;
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: default;
+}
+
+.exercise-name-input {
+  flex: 1;
+  font-size: 18px;
+  padding: 5px;
+  border: 2px solid #007bff;
+  border-radius: 3px;
+  font-weight: 600;
+}
+
+.exercise-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.mark-increase-btn {
+  width: 36px;
+  height: 36px;
+  background-color: #fff;
+  color: #ffd700;
+  border: 2px solid #ffd700;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 20px;
+  transition: all 0.2s;
+  display: flex;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.mark-increase-btn:hover {
+  background-color: #fffacd;
+}
+
+.mark-increase-btn.marked {
+  background-color: #ffd700;
+  color: #333;
+}
+
+.start-exercise-btn {
+  background-color: #28a745;
+  color: #fff;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background-color 0.2s;
+  flex-shrink: 0;
+}
+
+.start-exercise-btn:hover {
+  background-color: #218838;
+}
+
+.complete-exercise-btn {
+  background-color: #ffc107;
+  color: #333;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background-color 0.2s;
+  flex-shrink: 0;
+}
+
+.complete-exercise-btn:hover {
+  background-color: #ffb300;
+}
+
+.remove-exercise-btn {
+  width: 30px;
+  height: 30px;
+  background-color: #ff4444;
+  color: #fff;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 18px;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.remove-exercise-btn:hover {
+  background-color: #cc0000;
+}
+
+.sets-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.set-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 15px;
+  padding: 10px;
+  background-color: #fff;
+  border-radius: 3px;
+  border: 1px solid #e0e0e0;
+}
+
+.set-label {
+  font-weight: 600;
+  color: #666;
+  min-width: 50px;
+  padding-top: 8px;
+}
+
+.set-section {
+  display: flex;
+  gap: 20px;
+  flex: 1;
+  align-items: flex-start;
+}
+
+.data-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.data-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #999;
+  text-transform: uppercase;
+}
+
+.data-values {
+  display: flex;
+  gap: 10px;
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+}
+
+.data-values .weight {
+  min-width: 60px;
+}
+
+.data-values .reps {
+  min-width: 50px;
+}
+
+.previous-data {
+  flex: 1;
+}
+
+.current-data {
+  flex: 1;
+}
+
+.input-field {
+  padding: 6px 8px;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  font-size: 14px;
+}
+
+.weight-input,
+.reps-input {
+  width: 70px;
+  margin-right: 8px;
+}
+
+.remove-set-btn {
+  width: 30px;
+  height: 30px;
+  background-color: #ff9999;
+  color: #fff;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 18px;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 6px;
+}
+
+.remove-set-btn:hover {
+  background-color: #ff6666;
+}
+
+.add-set-btn {
+  background-color: #28a745;
+  color: #fff;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+  width: 100%;
+}
+
+.add-set-btn:hover {
+  background-color: #218838;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 30px;
+  max-width: 400px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.modal h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #333;
+  font-size: 20px;
+}
+
+.modal p {
+  color: #666;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.modal-cancel {
+  background-color: #6c757d;
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background-color 0.2s;
+}
+
+.modal-cancel:hover {
+  background-color: #5a6268;
+}
+
+.modal-confirm {
+  background-color: #ffc107;
+  color: #333;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background-color 0.2s;
+}
+
+.modal-confirm:hover {
+  background-color: #ffb300;
+}
