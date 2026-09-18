@@ -7,6 +7,7 @@ import './WorkoutDay.css'
 export default function WorkoutDay({
   day,
   onDayNameChange,
+  onToggleCollapse,
   onAddExercise,
   onRemoveExercise,
   onUpdateExercise
@@ -29,7 +30,7 @@ export default function WorkoutDay({
   }
 
   return (
-    <div className="workout-day">
+    <div className={`workout-day ${day.isCollapsed ? 'day-collapsed' : 'day-expanded'}`}>
       <div className="day-header">
         {isEditingName ? (
           <input
@@ -42,7 +43,7 @@ export default function WorkoutDay({
             className="day-name-input"
           />
         ) : (
-          <h2 
+          <h2
             className="day-name"
             onClick={() => setIsEditingName(true)}
             title="Click to edit"
@@ -50,29 +51,42 @@ export default function WorkoutDay({
             {day.name}
           </h2>
         )}
-        <button 
-          className="add-exercise-btn"
-          onClick={() => onAddExercise(day.id)}
-          title="Add new exercise"
-        >
-          +
-        </button>
+
+        <div className="day-actions">
+          <button
+            type="button"
+            className="collapse-day-btn"
+            onClick={() => onToggleCollapse(day.id, !day.isCollapsed)}
+            title={day.isCollapsed ? 'Expand day' : 'Collapse day'}
+          >
+            {day.isCollapsed ? 'Expand' : 'Collapse'}
+          </button>
+          <button
+            className="add-exercise-btn"
+            onClick={() => onAddExercise(day.id)}
+            title="Add new exercise"
+          >
+            +
+          </button>
+        </div>
       </div>
 
-      <div className="exercises-list">
-        {day.exercises.length === 0 ? (
-          <p className="no-exercises">No exercises yet. Click + to add one.</p>
-        ) : (
-          day.exercises.map(exercise => (
-            <Exercise
-              key={exercise.id}
-              exercise={exercise}
-              dayId={day.id}
-              onRemove={() => onRemoveExercise(day.id, exercise.id)}
-              onUpdate={(updated) => onUpdateExercise(day.id, exercise.id, updated)}
-            />
-          ))
-        )}
+      <div className="day-content">
+        <div className="exercises-list">
+          {day.exercises.length === 0 ? (
+            <p className="no-exercises">No exercises yet. Click + to add one.</p>
+          ) : (
+            day.exercises.map(exercise => (
+              <Exercise
+                key={exercise.id}
+                exercise={exercise}
+                dayId={day.id}
+                onRemove={() => onRemoveExercise(day.id, exercise.id)}
+                onUpdate={(updated) => onUpdateExercise(day.id, exercise.id, updated)}
+              />
+            ))
+          )}
+        </div>
       </div>
     </div>
   )

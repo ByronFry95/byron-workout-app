@@ -1,8 +1,10 @@
 .workout-day {
-  background-color: #fff;
-  border-radius: 8px;
+  background: #fff;
+  border-radius: 16px;
   padding: 20px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  overflow: hidden;
 }
 
 .day-header {
@@ -37,6 +39,27 @@
   font-weight: 600;
 }
 
+.day-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.collapse-day-btn,
+.add-exercise-btn {
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.collapse-day-btn {
+  background: #e5e7eb;
+  color: #111827;
+  padding: 0.6rem 0.8rem;
+  font-weight: 600;
+}
+
 .add-exercise-btn {
   width: 40px;
   height: 40px;
@@ -45,9 +68,7 @@
   color: #007bff;
   font-size: 24px;
   border-radius: 4px;
-  cursor: pointer;
   font-weight: bold;
-  transition: all 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -57,6 +78,29 @@
 .add-exercise-btn:hover {
   background-color: #007bff;
   color: #fff;
+}
+
+.day-content {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition:
+    max-height 0.35s ease,
+    opacity 0.25s ease,
+    margin-top 0.25s ease;
+  margin-top: 0;
+}
+
+.day-expanded .day-content {
+  max-height: 3000px;
+  opacity: 1;
+  margin-top: 0.5rem;
+}
+
+.day-collapsed .day-content {
+  max-height: 0;
+  opacity: 0;
+  margin-top: 0;
 }
 
 .exercises-list {
@@ -70,4 +114,16 @@
   font-style: italic;
   text-align: center;
   padding: 20px;
+}
+
+@media (max-width: 640px) {
+  .day-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .day-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
 }
