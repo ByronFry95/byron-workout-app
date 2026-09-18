@@ -2,37 +2,56 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/lib/authContext'
+import { getWorkoutDays, saveWorkoutDays } from '@/lib/firebaseQueries'
 import WorkoutDay from '@/components/WorkoutDay'
 import './workouts.css'
 
 export default function WorkoutsPage() {
+  const { user, loading: authLoading, logout } = useAuth()
+  const router = useRouter()
   const [days, setDays] = useState([])
   const [loading, setLoading] = useState(true)
 
-  // Load from localStorage on mount
+  // Load from Firebase on mount
   useEffect(() => {
-    const savedData = localStorage.getItem('workoutDays')
-    if (savedData) {
-      setDays(JSON.parse(savedData))
-    } else {
-      // Initialize with default workout days
-      const defaultDays = [
-        { id: 1, name: 'Chest and Back day', exercises: [] },
-        { id: 2, name: 'Arms and Shoulders', exercises: [] },
-        { id: 3, name: 'Legs', exercises: [] },
-      ]
-      setDays(defaultDays)
-      localStorage.setItem('workoutDays', JSON.stringify(defaultDays))
-    }
-    setLoading(false)
-  }, [])
+    if (authLoading) return
 
-  // Save to localStorage whenever days change
-  useEffect(() => {
-    if (!loading) {
-      localStorage.setItem('workoutDays', JSON.stringify(days))
+    if (!user) {
+      router.push('/login')
+      return
     }
-  }, [days, loading])
+
+    const loadWorkouts = async () => {
+      try {
+        const data = await getWorkoutDays(user.uid)
+        if (data.length > 0) {
+          setDays(data)
+        } else {
+          const defaultDays = [
+            { id: 1, name: 'Chest and Back day', exercises: [] },
+            { id: 2, name: 'Arms and Shoulders', exercises: [] },
+            { id: 3, name: 'Legs', exercises: [] },
+          ]
+          setDays(defaultDays)
+          await saveWorkoutDays(user.uid, defaultDays)
+        }
+      } catch (error) {
+        console.error('Error loading workouts:', error)
+      }
+      setLoading(false)
+    }
+
+    loadWorkouts()
+  }, [user, authLoading, router])
+
+  // Save to Firebase whenever days change
+  useEffect(() => {
+    if (!loading && user && days.length > 0) {
+      saveWorkoutDays(user.uid, days)
+    }
+  }, [days, loading, user])
 
   const handleDayNameChange = (id, newName) => {
     setDays(days.map(day => 
@@ -84,8 +103,21 @@ export default function WorkoutsPage() {
     }))
   }
 
-  if (loading) {
+  const handleLogout = async () => {
+    try {
+      await logout()
+      router.push('/login')
+    } catch (error) {
+      console.error('Error logging out:', error)
+    }
+  }
+
+  if (authLoading || loading) {
     return <div>Loading...</div>
+  }
+
+  if (!user) {
+    return null
   }
 
   return (
@@ -93,6 +125,9 @@ export default function WorkoutsPage() {
       <nav>
         <Link href="/" className="active">Workouts</Link>
         <Link href="/metrics">Body Metrics</Link>
+        <button onClick={handleLogout} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#333', fontSize: '14px' }}>
+          Logout
+        </button>
       </nav>
       <main>
         <h1>Workout Tracker</h1>

@@ -2,10 +2,15 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/lib/authContext'
+import { getMetricsHistory, saveMetrics, deleteMetricsEntry } from '@/lib/firebaseQueries'
 import { calculateBodyFatNavy, getBodyFatCategory } from '@/lib/bodyFatCalculator'
 import './metrics.css'
 
 export default function MetricsPage() {
+  const { user, loading: authLoading, logout } = useAuth()
+  const router = useRouter()
   const [measurements, setMeasurements] = useState({
     height: '',
     weight: '',
@@ -19,22 +24,29 @@ export default function MetricsPage() {
   const [bodyFat, setBodyFat] = useState(null)
   const [history, setHistory] = useState([])
   const [loading, setLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
 
-  // Load from localStorage on mount
+  // Load from Firebase on mount
   useEffect(() => {
-    const savedHistory = localStorage.getItem('metricsHistory')
-    if (savedHistory) {
-      setHistory(JSON.parse(savedHistory))
-    }
-    setLoading(false)
-  }, [])
+    if (authLoading) return
 
-  // Save history to localStorage
-  useEffect(() => {
-    if (!loading) {
-      localStorage.setItem('metricsHistory', JSON.stringify(history))
+    if (!user) {
+      router.push('/login')
+      return
     }
-  }, [history, loading])
+
+    const loadMetrics = async () => {
+      try {
+        const data = await getMetricsHistory(user.uid)
+        setHistory(data)
+      } catch (error) {
+        console.error('Error loading metrics:', error)
+      }
+      setLoading(false)
+    }
+
+    loadMetrics()
+  }, [user, authLoading, router])
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
@@ -68,38 +80,70 @@ export default function MetricsPage() {
     setBodyFat(bf)
   }
 
-  const saveMeasurements = () => {
+  const saveMeasurements = async () => {
     if (!bodyFat) {
       alert('Please calculate body fat first')
       return
     }
 
-    const entry = {
-      id: Date.now(),
-      ...measurements,
-      bodyFat,
-      category: getBodyFatCategory(bodyFat, measurements.gender)
+    setIsSaving(true)
+    try {
+      const entry = {
+        ...measurements,
+        bodyFat,
+        category: getBodyFatCategory(bodyFat, measurements.gender),
+        date: new Date(measurements.date).toISOString()
+      }
+
+      await saveMetrics(user.uid, entry)
+
+      // Reload history
+      const updatedHistory = await getMetricsHistory(user.uid)
+      setHistory(updatedHistory)
+
+      setMeasurements({
+        height: '',
+        weight: '',
+        waist: '',
+        neck: '',
+        hip: '',
+        gender: 'male',
+        date: new Date().toISOString().split('T')[0]
+      })
+      setBodyFat(null)
+    } catch (error) {
+      console.error('Error saving metrics:', error)
+      alert('Error saving measurements. Please try again.')
+    } finally {
+      setIsSaving(false)
     }
-
-    setHistory([entry, ...history])
-    setMeasurements({
-      height: '',
-      weight: '',
-      waist: '',
-      neck: '',
-      hip: '',
-      gender: 'male',
-      date: new Date().toISOString().split('T')[0]
-    })
-    setBodyFat(null)
   }
 
-  const deleteEntry = (id) => {
-    setHistory(history.filter(entry => entry.id !== id))
+  const deleteEntry = async (id) => {
+    try {
+      await deleteMetricsEntry(user.uid, id)
+      setHistory(history.filter(entry => entry.id !== id))
+    } catch (error) {
+      console.error('Error deleting metrics entry:', error)
+      alert('Error deleting entry. Please try again.')
+    }
   }
 
-  if (loading) {
+  const handleLogout = async () => {
+    try {
+      await logout()
+      router.push('/login')
+    } catch (error) {
+      console.error('Error logging out:', error)
+    }
+  }
+
+  if (authLoading || loading) {
     return <div>Loading...</div>
+  }
+
+  if (!user) {
+    return null
   }
 
   return (
@@ -107,6 +151,9 @@ export default function MetricsPage() {
       <nav>
         <Link href="/">Workouts</Link>
         <Link href="/metrics" className="active">Body Metrics</Link>
+        <button onClick={handleLogout} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#333', fontSize: '14px' }}>
+          Logout
+        </button>
       </nav>
       <main>
         <h1>Body Composition Tracker</h1>
@@ -214,8 +261,8 @@ export default function MetricsPage() {
                     {getBodyFatCategory(bodyFat, measurements.gender)}
                   </div>
                 </div>
-                <button className="save-btn" onClick={saveMeasurements}>
-                  Save Measurements
+                <button className="save-btn" onClick={saveMeasurements} disabled={isSaving}>
+                  {isSaving ? 'Saving...' : 'Save Measurements'}
                 </button>
               </div>
             )}
