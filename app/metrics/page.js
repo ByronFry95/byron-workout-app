@@ -148,15 +148,19 @@ export default function MetricsPage() {
 
   return (
     <>
-      <nav>
-        <Link href="/">Workouts</Link>
-        <Link href="/metrics" className="active">Body Metrics</Link>
-        <button onClick={handleLogout} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#333', fontSize: '14px' }}>
+      <nav className="mb-5 flex items-center gap-5 bg-panel px-5 py-4 shadow-soft">
+        <Link href="/" className="nav-link">Workouts</Link>
+        <Link href="/metrics" className="nav-link active">Body Metrics</Link>
+        <button
+          onClick={handleLogout}
+          className="ml-auto cursor-pointer border-none bg-transparent text-sm font-medium text-slate-700"
+        >
           Logout
         </button>
       </nav>
-      <main>
-        <h1>Body Composition Tracker</h1>
+
+      <main className="py-5">
+        <h1 className="mb-8 text-3xl font-bold text-slate-800">Body Composition Tracker</h1>
 
         <div className="metrics-container">
           <div className="input-section">
