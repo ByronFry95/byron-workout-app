@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Exercise from './Exercise'
 
 export default function WorkoutDay({
@@ -22,6 +22,26 @@ export default function WorkoutDay({
   const dragStartX = useRef(0)
   const currentDragX = useRef(0)
   const didSwipe = useRef(false)
+  const exerciseScrollRef = useRef(null)
+  const previousExerciseCount = useRef(day.exercises.length)
+
+  useEffect(() => {
+    const previousCount = previousExerciseCount.current
+    const currentCount = day.exercises.length
+
+    if (currentCount > previousCount) {
+      const newestExercise = day.exercises[currentCount - 1]
+      setExpandedExerciseId(newestExercise.id)
+      window.requestAnimationFrame(() => {
+        exerciseScrollRef.current?.scrollTo({
+          top: exerciseScrollRef.current.scrollHeight,
+          behavior: 'smooth',
+        })
+      })
+    }
+
+    previousExerciseCount.current = currentCount
+  }, [day.exercises])
 
   const handleSaveName = () => {
     onDayNameChange(day.id, editedName)
@@ -154,7 +174,7 @@ export default function WorkoutDay({
         </div>
 
         <div className={`overflow-hidden transition-all duration-300 ease-in-out ${day.isCollapsed ? 'max-h-0 opacity-0' : 'max-h-[3000px] opacity-100'}`}>
-          <div className="day-exercise-scroll flex min-h-0 flex-col gap-4 pr-1">
+          <div ref={exerciseScrollRef} className="day-exercise-scroll flex min-h-0 flex-col gap-4 pr-1">
             {day.exercises.length === 0 ? (
               <p className="py-5 text-center italic text-slate-400">No exercises yet.</p>
             ) : (
@@ -163,6 +183,7 @@ export default function WorkoutDay({
                   key={exercise.id}
                   exercise={exercise}
                   dayId={day.id}
+                  isExpanded={expandedExerciseId === exercise.id}
                   isOtherExerciseExpanded={expandedExerciseId !== null && expandedExerciseId !== exercise.id}
                   onExpand={handleExerciseExpand}
                   onCollapse={handleExerciseCollapse}

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 
-export default function Exercise({ exercise, dayId, isOtherExerciseExpanded, onExpand, onCollapse, onRemove, onUpdate }) {
+export default function Exercise({ exercise, dayId, isExpanded, isOtherExerciseExpanded, onExpand, onCollapse, onRemove, onUpdate }) {
   const [isEditingName, setIsEditingName] = useState(false)
   const [editedName, setEditedName] = useState(exercise.name)
   const [sets, setSets] = useState(exercise.sets)
@@ -12,10 +12,12 @@ export default function Exercise({ exercise, dayId, isOtherExerciseExpanded, onE
   const [showConfirmModal, setShowConfirmModal] = useState(false)
 
   useEffect(() => {
-    if (isOtherExerciseExpanded && !isCollapsed) {
+    if (isExpanded && isCollapsed) {
+      setIsCollapsed(false)
+    } else if (isOtherExerciseExpanded && !isCollapsed) {
       setIsCollapsed(true)
     }
-  }, [isOtherExerciseExpanded, isCollapsed])
+  }, [isExpanded, isOtherExerciseExpanded, isCollapsed])
 
   const handleCardTap = (event) => {
     event.stopPropagation()
@@ -69,6 +71,7 @@ export default function Exercise({ exercise, dayId, isOtherExerciseExpanded, onE
       ...exercise,
       sets: updatedSets,
       isStarted: true,
+      isCompleted: false,
       isCollapsed: false,
       markForIncrease
     })
@@ -88,6 +91,8 @@ export default function Exercise({ exercise, dayId, isOtherExerciseExpanded, onE
       ...exercise,
       sets,
       isStarted: false,
+      isCompleted: true,
+      completedAt: new Date().toISOString(),
       isCollapsed: true,
       markForIncrease
     })
@@ -111,6 +116,7 @@ export default function Exercise({ exercise, dayId, isOtherExerciseExpanded, onE
         ? { ...set, [field]: value }
         : set
     )
+
     setSets(updatedSets)
     onUpdate({ ...exercise, sets: updatedSets, isStarted, isCollapsed, markForIncrease })
   }

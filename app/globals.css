@@ -80,10 +80,22 @@ main {
   max-height: 70dvh;
   overflow-y: auto;
   overscroll-behavior: contain;
+  scrollbar-color: #94a3b8 transparent;
+  scrollbar-width: thin;
 }
 
 .exercise-card {
   flex-shrink: 0;
+}
+
+@media (max-width: 639px) {
+  .day-exercise-scroll {
+    scrollbar-width: none;
+  }
+
+  .day-exercise-scroll::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 .nav-link {

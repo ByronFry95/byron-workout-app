@@ -151,6 +151,7 @@ export default function MetricsPage() {
       <nav className="mb-5 flex items-center gap-5 bg-panel px-5 py-4 shadow-soft">
         <Link href="/" className="nav-link">Workouts</Link>
         <Link href="/metrics" className="nav-link active">Body Metrics</Link>
+        <Link href="/data" className="nav-link">Data</Link>
         <button
           onClick={handleLogout}
           className="ml-auto cursor-pointer border-none bg-transparent text-sm font-medium text-slate-700"

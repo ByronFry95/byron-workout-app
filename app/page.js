@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/authContext'
-import { getWorkoutDays, saveWorkoutDays, getWorkoutSession, saveWorkoutSession } from '@/lib/firebaseQueries'
+import { getWorkoutDays, saveWorkoutDays, getWorkoutSession, saveWorkoutSession, saveWorkoutLog } from '@/lib/firebaseQueries'
 import WorkoutDay from '@/components/WorkoutDay'
 import WorkoutTimer from '@/components/WorkoutTimer'
 
@@ -87,17 +87,11 @@ export default function WorkoutsPage() {
       const startedAt = Date.now()
       const nextSession = { startedAt, endedAt: null, durationMs: 0 }
       setWorkoutSession(nextSession)
-    } else {
-      setWorkoutSession(prev => {
-        if (!prev.startedAt) return prev
-
-        const endedAt = Date.now()
-        return {
-          startedAt: prev.startedAt,
-          endedAt,
-          durationMs: endedAt - prev.startedAt,
-        }
+      saveWorkoutSession(user.uid, nextSession).catch(error => {
+        console.error('Failed to save workout start:', error)
       })
+    } else {
+      handleEndDay()
     }
   }
 
@@ -173,7 +167,8 @@ export default function WorkoutsPage() {
   }
 
   const handleEndDay = async () => {
-    const activeDayId = days.find(day => day.isStarted)?.id
+    const activeDay = days.find(day => day.isStarted)
+    const activeDayId = activeDay?.id
 
     if (activeDayId) {
       setDays(days.map(day => (
@@ -195,8 +190,34 @@ export default function WorkoutsPage() {
 
     try {
       await saveWorkoutSession(user.uid, nextSession)
+
+      const completedExercises = (activeDay?.exercises || [])
+        .filter(exercise => exercise.isCompleted)
+        .map(exercise => ({
+          id: exercise.id,
+          name: exercise.name,
+          completedAt: exercise.completedAt || endedAt,
+          sets: exercise.sets
+            .filter(set => set.currentWeight !== '' && set.currentReps !== '')
+            .map(set => ({
+              setNumber: set.setNumber,
+              weight: set.currentWeight,
+              reps: set.currentReps,
+              loggedAt: exercise.completedAt || endedAt,
+            })),
+        }))
+        .filter(exercise => exercise.sets.length > 0)
+
+      await saveWorkoutLog(user.uid, {
+        dayId: activeDayId,
+        dayName: activeDay?.name || 'Workout Day',
+        startedAt: workoutSession.startedAt,
+        endedAt,
+        durationMs,
+        exercises: completedExercises,
+      })
     } catch (error) {
-      console.error('Failed to save workout session:', error)
+      console.error('Failed to save workout session or log:', error)
     }
   }
 
@@ -225,6 +246,7 @@ export default function WorkoutsPage() {
       <nav className="mb-5 flex items-center gap-5 bg-panel px-5 py-4 shadow-soft">
         <Link href="/" className="nav-link active">Workouts</Link>
         <Link href="/metrics" className="nav-link">Body Metrics</Link>
+        <Link href="/data" className="nav-link">Data</Link>
         <button
           onClick={handleLogout}
           className="ml-auto cursor-pointer border-none bg-transparent text-sm font-medium text-slate-700"
