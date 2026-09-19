@@ -5,13 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/authContext'
 import { deleteWorkoutLog, getWorkoutLogs, updateWorkoutLog } from '@/lib/firebaseQueries'
-
-const formatUKDate = (value) => {
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return '--'
-
-  return `${String(date.getDate()).padStart(2, '0')}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getFullYear()).slice(-2)}`
-}
+import { formatUKDate } from '@/lib/chartUtils'
 
 const formatDuration = (durationMs) => {
   const totalMinutes = Math.floor(Math.max(0, durationMs || 0) / 60000)
@@ -170,6 +164,7 @@ export default function DataPage() {
         <Link href="/" className="nav-link">Workouts</Link>
         <Link href="/metrics" className="nav-link">Body Metrics</Link>
         <Link href="/data" className="nav-link active">Data</Link>
+        <Link href="/stats" className="nav-link">Stats</Link>
         <button onClick={handleLogout} className="ml-auto shrink-0 cursor-pointer border-none bg-transparent text-sm font-medium text-slate-700">
           Logout
         </button>

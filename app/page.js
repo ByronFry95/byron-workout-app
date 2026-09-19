@@ -247,6 +247,7 @@ export default function WorkoutsPage() {
         <Link href="/" className="nav-link active">Workouts</Link>
         <Link href="/metrics" className="nav-link">Body Metrics</Link>
         <Link href="/data" className="nav-link">Data</Link>
+        <Link href="/stats" className="nav-link">Stats</Link>
         <button
           onClick={handleLogout}
           className="ml-auto cursor-pointer border-none bg-transparent text-sm font-medium text-slate-700"

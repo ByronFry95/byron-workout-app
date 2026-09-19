@@ -152,6 +152,7 @@ export default function MetricsPage() {
         <Link href="/" className="nav-link">Workouts</Link>
         <Link href="/metrics" className="nav-link active">Body Metrics</Link>
         <Link href="/data" className="nav-link">Data</Link>
+        <Link href="/stats" className="nav-link">Stats</Link>
         <button
           onClick={handleLogout}
           className="ml-auto cursor-pointer border-none bg-transparent text-sm font-medium text-slate-700"
