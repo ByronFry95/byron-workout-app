@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
-export default function Exercise({ exercise, dayId, onRemove, onUpdate }) {
+export default function Exercise({ exercise, dayId, isOtherExerciseExpanded, onExpand, onCollapse, onRemove, onUpdate }) {
   const [isEditingName, setIsEditingName] = useState(false)
   const [editedName, setEditedName] = useState(exercise.name)
   const [sets, setSets] = useState(exercise.sets)
@@ -10,6 +10,26 @@ export default function Exercise({ exercise, dayId, onRemove, onUpdate }) {
   const [isCollapsed, setIsCollapsed] = useState(exercise.isCollapsed ?? false)
   const [markForIncrease, setMarkForIncrease] = useState(exercise.markForIncrease || false)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
+
+  useEffect(() => {
+    if (isOtherExerciseExpanded && !isCollapsed) {
+      setIsCollapsed(true)
+    }
+  }, [isOtherExerciseExpanded, isCollapsed])
+
+  const handleCardTap = (event) => {
+    event.stopPropagation()
+    if (event.target.closest('button, input, textarea, select, a')) return
+    setIsCollapsed(previous => {
+      const nextCollapsed = !previous
+      if (nextCollapsed) {
+        onCollapse(exercise.id)
+      } else {
+        onExpand(exercise.id)
+      }
+      return nextCollapsed
+    })
+  }
 
   const highestWeight = sets.reduce((max, set) => {
     const weight = Number(set.currentWeight || set.previousWeight || 0)
@@ -44,6 +64,7 @@ export default function Exercise({ exercise, dayId, onRemove, onUpdate }) {
     setSets(updatedSets)
     setIsStarted(true)
     setIsCollapsed(false)
+    onExpand(exercise.id)
     onUpdate({
       ...exercise,
       sets: updatedSets,
@@ -58,22 +79,14 @@ export default function Exercise({ exercise, dayId, onRemove, onUpdate }) {
   }
 
   const confirmCompleteExercise = () => {
-    const updatedSets = sets.map(set => ({
-      ...set,
-      previousWeight: set.currentWeight || set.previousWeight,
-      previousReps: set.currentReps || set.previousReps,
-      currentWeight: '',
-      currentReps: ''
-    }))
-
-    setSets(updatedSets)
     setIsStarted(false)
     setIsCollapsed(true)
+    onCollapse(exercise.id)
     setShowConfirmModal(false)
 
     onUpdate({
       ...exercise,
-      sets: updatedSets,
+      sets,
       isStarted: false,
       isCollapsed: true,
       markForIncrease
@@ -131,8 +144,8 @@ export default function Exercise({ exercise, dayId, onRemove, onUpdate }) {
   }
 
   return (
-    <div className={`overflow-hidden rounded-2xl border p-4 transition-all duration-300 ${isStarted ? 'border-blue-500 shadow-[0_0_0_1px_rgba(59,130,246,0.2)]' : 'border-slate-700'} bg-slate-900`}>
-      <div className="flex items-center justify-between gap-4">
+    <div data-exercise-card className={`exercise-card w-full min-w-0 overflow-hidden rounded-2xl border p-3 transition-all duration-300 sm:p-4 ${isStarted ? 'border-blue-500 shadow-[0_0_0_1px_rgba(59,130,246,0.2)]' : 'border-slate-700'} bg-slate-900`} onClick={handleCardTap}>
+      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {isEditingName ? (
           <input
             type="text"
@@ -144,28 +157,34 @@ export default function Exercise({ exercise, dayId, onRemove, onUpdate }) {
             className="w-full max-w-[280px] rounded-lg border border-slate-500 bg-slate-950 px-3 py-2 text-base font-medium text-white outline-none ring-0"
           />
         ) : (
-          <div className="flex flex-wrap items-center gap-2 text-white">
+          <div className="flex min-w-0 w-full flex-wrap items-center gap-2 text-white">
             <button
               type="button"
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-600 bg-slate-800 text-sm text-slate-200 transition-colors hover:border-slate-400 hover:text-white"
+              className="flex h-6 w-6 items-center justify-center rounded-md border border-slate-600 bg-slate-800 text-xs text-slate-200 transition-colors hover:border-slate-400 hover:text-white"
               onClick={() => setIsEditingName(true)}
               title="Edit exercise name"
               aria-label="Edit exercise name"
             >
               ✎
             </button>
-            <h3 className="text-lg font-semibold text-white">{exercise.name}</h3>
+            <h3 className="min-w-0 max-w-full break-words text-lg font-semibold text-white">{exercise.name}</h3>
             {isStarted && <span className="rounded-full bg-blue-500/15 px-2 py-1 text-[0.65rem] font-bold text-blue-200">In Progress</span>}
-            {markForIncrease && <span className="rounded-full bg-amber-500/15 px-2 py-1 text-[0.65rem] font-bold text-amber-200">⬆ Weight +</span>}
-            {prLabel && <span className="rounded-full bg-emerald-500/15 px-2 py-1 text-[0.65rem] font-bold text-emerald-200">{prLabel}</span>}
           </div>
         )}
 
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-nowrap gap-2 sm:grid sm:w-auto sm:grid-cols-4">
           <button
             type="button"
-            className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-700 text-sm font-bold text-white transition-colors hover:bg-slate-600"
-            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="hidden h-9 w-[2.5em] shrink-0 items-center justify-center rounded-lg bg-slate-700 text-sm font-bold text-white transition-colors hover:bg-slate-600 sm:flex sm:h-8 sm:w-auto"
+            onClick={() => {
+              const nextCollapsed = !isCollapsed
+              setIsCollapsed(nextCollapsed)
+              if (nextCollapsed) {
+                onCollapse(exercise.id)
+              } else {
+                onExpand(exercise.id)
+              }
+            }}
             title={isCollapsed ? 'Expand exercise' : 'Collapse exercise'}
             aria-label={isCollapsed ? 'Expand exercise' : 'Collapse exercise'}
           >
@@ -174,7 +193,7 @@ export default function Exercise({ exercise, dayId, onRemove, onUpdate }) {
 
           <button
             type="button"
-            className={`flex h-8 w-8 items-center justify-center rounded-lg text-sm font-bold transition-colors ${markForIncrease ? 'bg-amber-400 text-slate-900' : 'bg-amber-500/80 text-white hover:bg-amber-400 hover:text-slate-900'}`}
+            className={`flex h-[2.5em] w-[2.5em] shrink-0 items-center justify-center rounded-lg border-2 text-sm font-bold transition-colors sm:h-8 sm:w-auto ${markForIncrease ? 'border-amber-300 bg-amber-300 text-amber-950 shadow-[0_0_0_2px_rgba(251,191,36,0.35)]' : 'border-slate-500 bg-slate-700 text-slate-300 hover:border-amber-300 hover:bg-amber-950 hover:text-amber-200'}`}
             onClick={handleToggleMarkForIncrease}
             title="Mark to increase weight next week"
           >
@@ -184,35 +203,44 @@ export default function Exercise({ exercise, dayId, onRemove, onUpdate }) {
           {!isStarted && (
             <button
               type="button"
-              className="rounded-lg bg-emerald-500 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-400"
+              className="flex h-[2.5em] w-[2.5em] shrink-0 items-center justify-center rounded-lg bg-emerald-500 px-2 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-400 sm:h-auto sm:w-auto sm:px-3"
               onClick={handleStartExercise}
               title="Start exercise - will save current week as previous week"
             >
-              Start
+              <span className="sm:hidden" aria-hidden="true">▶</span>
+              <span className="hidden sm:inline">Start</span>
             </button>
           )}
 
           {isStarted && (
             <button
               type="button"
-              className="rounded-lg bg-emerald-500 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-400"
+              className="flex h-[2.5em] w-[2.5em] shrink-0 items-center justify-center rounded-lg bg-rose-600 px-2 py-2 text-sm font-semibold text-white transition-colors hover:bg-rose-500 sm:h-auto sm:w-auto sm:bg-emerald-500 sm:px-3 sm:hover:bg-emerald-400"
               onClick={handleCompleteExercise}
               title="Complete exercise - saves current week as previous week and resets"
             >
-              Complete
+              <span className="sm:hidden" aria-hidden="true">■</span>
+              <span className="hidden sm:inline">Complete</span>
             </button>
           )}
 
           <button
             type="button"
-            className="rounded-lg bg-slate-700 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-600"
+            className="flex h-[2.5em] w-[2.5em] shrink-0 items-center justify-center rounded-lg bg-slate-700 px-2 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-600 sm:h-auto sm:w-auto sm:px-3"
             onClick={onRemove}
             title="Remove exercise"
           >
-            ✕
+            <span aria-hidden="true">✕</span>
           </button>
         </div>
       </div>
+
+      {(markForIncrease || prLabel) && (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          {markForIncrease && <span className="rounded-full bg-amber-500/15 px-2 py-1 text-[0.65rem] font-bold text-amber-200">⬆ Weight +</span>}
+          {prLabel && <span className="rounded-full bg-emerald-500/15 px-2 py-1 text-[0.65rem] font-bold text-emerald-200">{prLabel}</span>}
+        </div>
+      )}
 
       <div className={`overflow-hidden transition-all duration-300 ${isCollapsed ? 'max-h-0 opacity-0' : 'mt-4 max-h-[1600px] opacity-100'}`}>
         <div className="flex flex-col gap-3">
@@ -225,10 +253,10 @@ export default function Exercise({ exercise, dayId, onRemove, onUpdate }) {
             const repDelta = currentReps - previousReps
 
             return (
-              <div key={set.setNumber} className="rounded-xl border border-slate-700 bg-slate-950/70 p-3">
+              <div key={set.setNumber} className="shrink-0 rounded-xl border border-slate-700 bg-slate-950/70 p-3">
                 <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-300">Set {set.setNumber}</div>
 
-                <div className="space-y-3">
+                <div className="flex flex-col gap-3">
                   <div className="rounded-lg border border-slate-700 bg-slate-900/70 p-2">
                     <div className="mb-1 text-[0.7rem] font-medium uppercase tracking-wide text-slate-400">Previous Week</div>
                     <div className="flex flex-wrap gap-2 text-sm">
@@ -298,7 +326,7 @@ export default function Exercise({ exercise, dayId, onRemove, onUpdate }) {
           <div className="w-[min(90vw,420px)] rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-2xl">
             <h3 className="mb-2 text-xl font-bold text-white">Complete Exercise?</h3>
             <p className="mb-4 text-sm leading-6 text-slate-300">
-              Are you sure you want to complete this exercise? Your current week data will be saved as the previous week and the exercise will reset for the next session.
+              Are you sure you want to complete this exercise? Your current week data will remain visible until you start this exercise again, when it will roll over to Previous Week.
             </p>
             <div className="flex justify-end gap-3">
               <button type="button" className="rounded-lg bg-slate-700 px-3 py-2 text-sm font-semibold text-white" onClick={() => setShowConfirmModal(false)}>

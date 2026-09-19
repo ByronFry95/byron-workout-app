@@ -76,6 +76,16 @@ main {
   border: 1px solid var(--panel-border);
 }
 
+.day-exercise-scroll {
+  max-height: 70dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.exercise-card {
+  flex-shrink: 0;
+}
+
 .nav-link {
   border-radius: 0.5rem;
   padding: 0.625rem 1rem;
