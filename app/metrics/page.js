@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/authContext'
 import { getMetricsHistory, saveMetrics, deleteMetricsEntry } from '@/lib/firebaseQueries'
 import { calculateBodyFatNavy, getBodyFatCategory } from '@/lib/bodyFatCalculator'
 import './metrics.css'
+import AppNav from '@/components/AppNav'
 
 export default function MetricsPage() {
   const { user, loading: authLoading, logout } = useAuth()
@@ -25,6 +26,7 @@ export default function MetricsPage() {
   const [history, setHistory] = useState([])
   const [loading, setLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const [loadError, setLoadError] = useState('')
 
   // Load from Firebase on mount
   useEffect(() => {
@@ -41,6 +43,7 @@ export default function MetricsPage() {
         setHistory(data)
       } catch (error) {
         console.error('Error loading metrics:', error)
+        setLoadError(error?.code || error?.message || 'Unable to load metrics from Firebase.')
       }
       setLoading(false)
     }
@@ -146,20 +149,13 @@ export default function MetricsPage() {
     return null
   }
 
+  if (loadError) {
+    return <div className="min-h-screen bg-page px-5 py-10 text-center font-dark">Firebase error: {loadError}</div>
+  }
+
   return (
     <>
-      <nav className="mb-5 flex items-center gap-5 bg-panel px-5 py-4 shadow-soft">
-        <Link href="/" className="nav-link">Workouts</Link>
-        <Link href="/metrics" className="nav-link active">Body Metrics</Link>
-        <Link href="/data" className="nav-link">Data</Link>
-        <Link href="/stats" className="nav-link">Stats</Link>
-        <button
-          onClick={handleLogout}
-          className="ml-auto cursor-pointer border-none bg-transparent text-sm font-medium text-slate-700"
-        >
-          Logout
-        </button>
-      </nav>
+      <AppNav />
 
       <main className="py-5">
         <h1 className="mb-8 text-3xl font-bold text-slate-800">Body Composition Tracker</h1>

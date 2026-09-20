@@ -1,12 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/authContext'
 import { getWorkoutDays, saveWorkoutDays, getWorkoutSession, saveWorkoutSession, saveWorkoutLog } from '@/lib/firebaseQueries'
 import WorkoutDay from '@/components/WorkoutDay'
 import WorkoutTimer from '@/components/WorkoutTimer'
+import AppNav from '@/components/AppNav'
 
 export default function WorkoutsPage() {
   const { user, loading: authLoading, logout } = useAuth()
@@ -18,6 +18,7 @@ export default function WorkoutsPage() {
     endedAt: null,
     durationMs: 0,
   })
+  const [loadError, setLoadError] = useState('')
 
   // Load from Firebase on mount
   useEffect(() => {
@@ -49,6 +50,7 @@ export default function WorkoutsPage() {
         }
       } catch (error) {
         console.error('Error loading workouts:', error)
+        setLoadError(error?.code || error?.message || 'Unable to load workouts from Firebase.')
       }
       setLoading(false)
     }
@@ -241,20 +243,13 @@ export default function WorkoutsPage() {
     return null
   }
 
+  if (loadError) {
+    return <div className="min-h-screen bg-page px-5 py-10 text-center font-dark">Firebase error: {loadError}</div>
+  }
+
   return (
     <>
-      <nav className="mb-5 flex items-center gap-5 bg-panel px-5 py-4 shadow-soft">
-        <Link href="/" className="nav-link active">Workouts</Link>
-        <Link href="/metrics" className="nav-link">Body Metrics</Link>
-        <Link href="/data" className="nav-link">Data</Link>
-        <Link href="/stats" className="nav-link">Stats</Link>
-        <button
-          onClick={handleLogout}
-          className="ml-auto cursor-pointer border-none bg-transparent text-sm font-medium text-slate-700"
-        >
-          Logout
-        </button>
-      </nav>
+      <AppNav />
 
       <main className="py-5">
         <h1 className="mb-8 text-3xl font-bold text-slate-800">Workout Tracker</h1>

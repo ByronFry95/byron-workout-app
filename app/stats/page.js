@@ -1,12 +1,12 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/authContext'
 import { getMetricsHistory, getWorkoutDays, getWorkoutLogs } from '@/lib/firebaseQueries'
 import { CHART_PALETTE, TIMEFRAMES, filterPointsByTimeframe, resolveExerciseColors } from '@/lib/chartUtils'
 import TrendLineChart from '@/components/TrendLineChart'
+import AppNav from '@/components/AppNav'
 
 const MAX_SELECTED_EXERCISES = 5
 
@@ -19,6 +19,7 @@ export default function StatsPage() {
   const [workoutLogs, setWorkoutLogs] = useState([])
   const [timeframe, setTimeframe] = useState('3m')
   const [selectedExercises, setSelectedExercises] = useState([])
+  const [loadError, setLoadError] = useState('')
 
   useEffect(() => {
     if (authLoading) return
@@ -37,7 +38,10 @@ export default function StatsPage() {
         setWorkoutDays(days)
         setWorkoutLogs(logs)
       })
-      .catch(error => console.error('Error loading stats data:', error))
+      .catch(error => {
+        console.error('Error loading stats data:', error)
+        setLoadError(error?.code || error?.message || 'Unable to load stats from Firebase.')
+      })
       .finally(() => setLoading(false))
   }, [user, authLoading, router])
 
@@ -136,17 +140,13 @@ export default function StatsPage() {
 
   if (!user) return null
 
+  if (loadError) {
+    return <div className="min-h-screen bg-page px-5 py-10 text-center font-dark">Firebase error: {loadError}</div>
+  }
+
   return (
     <>
-      <nav className="mb-5 flex items-center gap-2 overflow-x-auto bg-panel px-5 py-4 shadow-soft sm:gap-5">
-        <Link href="/" className="nav-link">Workouts</Link>
-        <Link href="/metrics" className="nav-link">Body Metrics</Link>
-        <Link href="/data" className="nav-link">Data</Link>
-        <Link href="/stats" className="nav-link active">Stats</Link>
-        <button onClick={handleLogout} className="ml-auto shrink-0 cursor-pointer border-none bg-transparent text-sm font-medium text-slate-700">
-          Logout
-        </button>
-      </nav>
+      <AppNav />
 
       <main className="py-5">
         <h1 className="mb-4 text-3xl font-bold text-slate-800">Stats</h1>

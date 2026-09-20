@@ -1,11 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/authContext'
 import { deleteWorkoutLog, getWorkoutLogs, updateWorkoutLog } from '@/lib/firebaseQueries'
 import { formatUKDate } from '@/lib/chartUtils'
+import AppNav from '@/components/AppNav'
 
 const formatDuration = (durationMs) => {
   const totalMinutes = Math.floor(Math.max(0, durationMs || 0) / 60000)
@@ -122,6 +122,7 @@ export default function DataPage() {
   const router = useRouter()
   const [logs, setLogs] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
 
   useEffect(() => {
     if (authLoading) return
@@ -132,7 +133,10 @@ export default function DataPage() {
 
     getWorkoutLogs(user.uid)
       .then(setLogs)
-      .catch(error => console.error('Error loading workout logs:', error))
+      .catch(error => {
+        console.error('Error loading workout logs:', error)
+        setLoadError(error?.code || error?.message || 'Unable to load workout logs from Firebase.')
+      })
       .finally(() => setLoading(false))
   }, [user, authLoading, router])
 
@@ -158,17 +162,13 @@ export default function DataPage() {
 
   if (!user) return null
 
+  if (loadError) {
+    return <div className="min-h-screen bg-page px-5 py-10 text-center font-dark">Firebase error: {loadError}</div>
+  }
+
   return (
     <>
-      <nav className="mb-5 flex items-center gap-2 overflow-x-auto bg-panel px-5 py-4 shadow-soft sm:gap-5">
-        <Link href="/" className="nav-link">Workouts</Link>
-        <Link href="/metrics" className="nav-link">Body Metrics</Link>
-        <Link href="/data" className="nav-link active">Data</Link>
-        <Link href="/stats" className="nav-link">Stats</Link>
-        <button onClick={handleLogout} className="ml-auto shrink-0 cursor-pointer border-none bg-transparent text-sm font-medium text-slate-700">
-          Logout
-        </button>
-      </nav>
+      <AppNav />
 
       <main className="py-5">
         <h1 className="mb-6 text-3xl font-bold text-slate-800">Workout Data</h1>

@@ -10,6 +10,16 @@ export default function Exercise({ exercise, dayId, isExpanded, isOtherExerciseE
   const [isCollapsed, setIsCollapsed] = useState(exercise.isCollapsed ?? false)
   const [markForIncrease, setMarkForIncrease] = useState(exercise.markForIncrease || false)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const [expandedSetNumbers, setExpandedSetNumbers] = useState(() => new Set((exercise.sets || []).slice(0, 5).map(set => set.setNumber)))
+
+  useEffect(() => {
+    setExpandedSetNumbers(previous => {
+      const availableSetNumbers = new Set(sets.map(set => set.setNumber))
+      const next = new Set([...previous].filter(setNumber => availableSetNumbers.has(setNumber)))
+      sets.slice(0, 5).forEach(set => next.add(set.setNumber))
+      return next
+    })
+  }, [sets])
 
   useEffect(() => {
     if (isExpanded && isCollapsed) {
@@ -143,6 +153,18 @@ export default function Exercise({ exercise, dayId, isExpanded, isOtherExerciseE
     onUpdate({ ...exercise, sets: updatedSets, isStarted, isCollapsed, markForIncrease })
   }
 
+  const handleToggleSet = (setNumber) => {
+    setExpandedSetNumbers(previous => {
+      const next = new Set(previous)
+      if (next.has(setNumber)) {
+        next.delete(setNumber)
+      } else {
+        next.add(setNumber)
+      }
+      return next
+    })
+  }
+
   const getDeltaTone = (delta) => {
     if (delta > 0) return 'text-emerald-300'
     if (delta < 0) return 'text-rose-300'
@@ -258,11 +280,23 @@ export default function Exercise({ exercise, dayId, isExpanded, isOtherExerciseE
             const weightDelta = currentWeight - previousWeight
             const repDelta = currentReps - previousReps
 
+            const isSetExpanded = expandedSetNumbers.has(set.setNumber)
+
             return (
               <div key={set.setNumber} className="shrink-0 rounded-xl border border-slate-700 bg-slate-950/70 p-3">
-                <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-300">Set {set.setNumber}</div>
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between text-left text-xs font-semibold uppercase tracking-wide text-slate-300"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    handleToggleSet(set.setNumber)
+                  }}
+                >
+                  <span>Set {set.setNumber}</span>
+                  <span aria-hidden="true">{isSetExpanded ? '▴' : '▾'}</span>
+                </button>
 
-                <div className="flex flex-col gap-3">
+                {isSetExpanded && <div className="mt-2 flex flex-col gap-3">
                   <div className="rounded-lg border border-slate-700 bg-slate-900/70 p-2">
                     <div className="mb-1 text-[0.7rem] font-medium uppercase tracking-wide text-slate-400">Previous Week</div>
                     <div className="flex flex-wrap gap-2 text-sm">
@@ -298,9 +332,9 @@ export default function Exercise({ exercise, dayId, isExpanded, isOtherExerciseE
                       </span>
                     </div>
                   </div>
-                </div>
+                </div>}
 
-                {sets.length > 1 && (
+                {sets.length > 1 && isSetExpanded && (
                   <div className="mt-3 flex justify-end">
                     <button
                       type="button"

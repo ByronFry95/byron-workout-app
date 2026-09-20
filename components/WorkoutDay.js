@@ -148,7 +148,11 @@ export default function WorkoutDay({
             <button
               type="button"
               className={day.isStarted ? 'w-full rounded-lg bg-amber-400 px-3 py-2 text-sm font-semibold text-slate-900 transition-colors hover:bg-amber-300 sm:w-auto' : 'w-full rounded-lg bg-emerald-500 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-400 sm:w-auto'}
-              onClick={() => onToggleDayStart(day.id, !day.isStarted)}
+              onClick={(event) => {
+                event.stopPropagation()
+                onToggleDayStart(day.id, !day.isStarted)
+              }}
+              onPointerDown={(event) => event.stopPropagation()}
             >
               {day.isStarted ? 'End Day' : 'Start Day'}
             </button>
@@ -156,7 +160,10 @@ export default function WorkoutDay({
             <button
               type="button"
               className="hidden w-full rounded-lg bg-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 transition-colors hover:bg-slate-300 sm:block sm:w-auto"
-              onClick={() => onToggleCollapse(day.id, !day.isCollapsed)}
+              onClick={(event) => {
+                event.stopPropagation()
+                onToggleCollapse(day.id, !day.isCollapsed)
+              }}
               title={day.isCollapsed ? 'Expand day' : 'Collapse day'}
             >
               {day.isCollapsed ? 'Expand' : 'Collapse'}
@@ -165,7 +172,10 @@ export default function WorkoutDay({
             <button
               type="button"
               className="hidden w-full rounded-lg bg-rose-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-rose-500 sm:block sm:w-auto"
-              onClick={() => setShowDeleteModal(true)}
+              onClick={(event) => {
+                event.stopPropagation()
+                setShowDeleteModal(true)
+              }}
               title="Remove day"
             >
               Remove

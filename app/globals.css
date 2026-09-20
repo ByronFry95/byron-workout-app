@@ -115,3 +115,66 @@ main {
   background-color: #2563eb;
   color: #ffffff;
 }
+
+.app-nav-desktop {
+  margin-bottom: 1.25rem;
+  background-color: var(--panel-bg);
+  padding: 1rem 1.25rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.app-nav-mobile {
+  display: none;
+}
+
+.app-nav-item {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  border: 0;
+  background: transparent;
+  color: #64748b;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.app-nav-item.active {
+  color: #2563eb;
+}
+
+.app-nav-icon {
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+@media (max-width: 639px) {
+  body {
+    padding-bottom: 5rem;
+  }
+
+  .app-nav-desktop {
+    display: none;
+  }
+
+  .app-nav-mobile {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 40;
+    display: flex;
+    min-height: 4.25rem;
+    align-items: stretch;
+    gap: 0.2rem;
+    border-top: 1px solid #e2e8f0;
+    background-color: rgba(255, 255, 255, 0.96);
+    padding: 0.5rem 0.35rem calc(0.5rem + env(safe-area-inset-bottom));
+    box-shadow: 0 -4px 16px rgba(15, 23, 42, 0.08);
+    backdrop-filter: blur(12px);
+  }
+}
