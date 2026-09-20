@@ -36,7 +36,7 @@ export default function StatsPage() {
     Promise.all([
       getMetricsHistory(user.uid),
       getWorkoutDays(user.uid),
-      getWorkoutLogs(user.uid),
+      getWorkoutLogs(user.uid, 400),
     ])
       .then(([metrics, days, logs]) => {
         setMetricsHistory(metrics)
@@ -114,6 +114,9 @@ export default function StatsPage() {
     ]
   }, [metricsHistory, timeframe])
 
+  const bodyWeightPoints = metricsSeries.find(series => series.id === 'weight')?.points || []
+  const bodyWeightChange = bodyWeightPoints.length > 1 ? bodyWeightPoints.at(-1).y - bodyWeightPoints[0].y : null
+
   const resolvedSelected = resolveExerciseColors(selectedExercises)
 
   const strengthSeries = resolvedSelected.map(exercise => ({
@@ -130,9 +133,9 @@ export default function StatsPage() {
   const firstSet = activeStrengthPoint[0]?.y
   const latestSet = activeStrengthPoint[activeStrengthPoint.length - 1]?.y
   const change = firstSet !== undefined && latestSet !== undefined ? latestSet - firstSet : null
-  const bestStrengthSet = activeStrengthPoint.sort((a, b) => b.y - a.y)[0]
-  const latestReps = bestStrengthSet?.reps || 0
-  const estimatedOneRepMax = topSet && latestReps ? topSet * (1 + latestReps / 30) : null
+  const bestStrengthSet = [...activeStrengthPoint].sort((a, b) => b.y - a.y)[0]
+  const bestSetReps = bestStrengthSet?.reps || 0
+  const estimatedOneRepMax = topSet && bestSetReps ? topSet * (1 + bestSetReps / 30) : null
 
   const toggleExercise = (exercise) => {
     setSelectedExercises(previous => {
@@ -162,30 +165,19 @@ export default function StatsPage() {
 
         <div className="mb-4"><Segmented options={[{ value: 'body', label: 'Body' }, { value: 'strength', label: 'Strength' }]} value={view} onChange={setView} columns={2} /></div>
 
-        <div className="mb-6 grid grid-cols-5 border-2 border-[var(--divider)]">
-          {TIMEFRAMES.map(preset => (
-            <button
-              key={preset.key}
-              type="button"
-              onClick={() => setTimeframe(preset.key)}
-              className={`min-h-11 text-xs font-bold transition-colors ${timeframe === preset.key ? 'bg-[var(--ink)] text-white' : 'bg-transparent text-[var(--ink)] hover:bg-[var(--n-300)]'}`}
-            >
-              {preset.label}
-            </button>
-          ))}
-        </div>
+        <div className="mb-6"><Segmented options={TIMEFRAMES.map(preset => ({ value: preset.key, label: preset.label }))} value={timeframe} onChange={setTimeframe} columns={TIMEFRAMES.length} /></div>
 
         {view === 'body' ? <section className="mb-8">
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">Body Composition Trend</h2>
-          <StatTiles tiles={[{ label: 'Weight now', value: metricsHistory[0]?.weight ? `${metricsHistory[0].weight}kg` : '--' }, { label: 'Change', value: metricsHistory[0]?.weight && metricsHistory.at(-1)?.weight ? `${(Number(metricsHistory[0].weight) - Number(metricsHistory.at(-1).weight)).toFixed(1)}kg` : '--' }, { label: 'Body fat now', value: metricsHistory[0]?.bodyFat ? `${metricsHistory[0].bodyFat}%` : '--' }]} />
-          <TrendLineChart series={metricsSeries} height={170} normalize emptyMessage="Log body metrics to see your trend here." />
+          <StatTiles tiles={[{ label: 'Weight now', value: metricsHistory[0]?.weight ? `${metricsHistory[0].weight}kg` : '--' }, { label: `${timeframe} change`, value: bodyWeightChange === null ? '--' : `${bodyWeightChange > 0 ? '+' : ''}${bodyWeightChange.toFixed(1)}kg` }, { label: 'Body fat now', value: metricsHistory[0]?.bodyFat ? `${metricsHistory[0].bodyFat}%` : '--' }]} />
+          <TrendLineChart series={metricsSeries} height={170} emptyMessage="Log body metrics to see your trend here." />
         </section> : <section className="mb-8">
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">Strength Trend</h2>
           <div className="mb-3 grid grid-cols-3 gap-px border-2 border-[var(--divider)] bg-[var(--divider)]">
             {[
-              ['Top set', topSet ? `${topSet}kg` : '--'],
-              ['Change', change === null ? '--' : `${change > 0 ? '+' : ''}${change}kg`],
-              ['Est. 1RM', estimatedOneRepMax ? `${estimatedOneRepMax.toFixed(1)}kg` : '--'],
+              [`${resolvedSelected[0]?.name || 'Exercise'} top set`, topSet ? `${topSet}kg` : '--'],
+              [`${resolvedSelected[0]?.name || 'Exercise'} change`, change === null ? '--' : `${change > 0 ? '+' : ''}${change}kg`],
+              [`${resolvedSelected[0]?.name || 'Exercise'} est. 1RM`, estimatedOneRepMax ? `${estimatedOneRepMax.toFixed(1)}kg` : '--'],
             ].map(([label, value]) => <div key={label} className="bg-[var(--surface)] p-3"><p className="text-xs uppercase text-[var(--n-600)]">{label}</p><p className="num mt-1 text-lg">{value}</p></div>)}
           </div>
           <div className="mb-3 flex gap-2"><button type="button" onClick={() => setPickerOpen(true)} className="min-h-11 flex-1 border-2 border-[var(--divider)] bg-[var(--surface)] px-3 text-left font-bold">{resolvedSelected.length ? `${resolvedSelected.length} exercises selected` : 'Choose exercises'}</button></div>

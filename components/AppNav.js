@@ -7,7 +7,7 @@ import { useAuth } from '@/lib/authContext'
 import { BarChart3, Dumbbell, List, LogOut, UserRound, X } from 'lucide-react'
 
 const navigation = [
-  { href: '/', label: 'Workouts', shortLabel: 'Workouts', icon: Dumbbell },
+  { href: '/workouts', label: 'Workouts', shortLabel: 'Workouts', icon: Dumbbell },
   { href: '/metrics', label: 'Body Metrics', shortLabel: 'Metrics', icon: UserRound },
   { href: '/data', label: 'Data', shortLabel: 'Data', icon: List },
   { href: '/stats', label: 'Stats', shortLabel: 'Stats', icon: BarChart3 },

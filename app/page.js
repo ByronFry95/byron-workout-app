@@ -1,264 +1,77 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { useAuth } from '@/lib/authContext'
-import { getWorkoutDays, getWorkoutLogs, saveWorkoutDays, saveWorkoutLog } from '@/lib/firebaseQueries'
-import { useWorkoutSession } from '@/lib/workoutSessionContext'
-import WorkoutDay from '@/components/WorkoutDay'
-import AppNav from '@/components/AppNav'
-import { Plus } from 'lucide-react'
+import Link from 'next/link'
+import { BarChart3, Check, Dumbbell, List, UserRound } from 'lucide-react'
+import './landing.css'
 
-export default function WorkoutsPage() {
-  const { user, loading: authLoading } = useAuth()
-  const { session: workoutSession, startSession, endSession, registerEndHandler } = useWorkoutSession()
-  const router = useRouter()
-  const [days, setDays] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState('')
-  const [workoutLogs, setWorkoutLogs] = useState([])
+const pageCards = [
+  { title: 'Workouts', description: 'Your days, their exercises and when you last did each one.', icon: Dumbbell },
+  { title: 'Body Metrics', description: 'Body fat by the US Navy formula with a fast, reactive measurement flow.', icon: UserRound },
+  { title: 'Data', description: 'Completed sessions grouped by month with editable set history.', icon: List },
+  { title: 'Stats', description: 'Strength and body composition trends across focused timeframes.', icon: BarChart3 },
+]
 
-  // Load from Firebase on mount
-  useEffect(() => {
-    if (authLoading) return
+const features = [
+  ['Prefilled from last week', "Starting an exercise brings the last session's numbers into the current row."],
+  ['One-tap set logging', 'Fixed set rows, a keypad sheet and a clear confirmation target for every set.'],
+  ['Session timer with wake lock', 'The clock follows the active session and keeps the screen awake while you train.'],
+  ['Undo, not confirm', 'Completing an exercise happens immediately and offers a short undo window.'],
+  ['Editable history', 'Correct a mistyped weight or rep directly from the Data page.'],
+  ['Syncs across devices', 'Firebase Authentication and Firestore keep your training history available wherever you train.'],
+]
 
-    if (!user) {
-      router.push('/login')
-      return
-    }
+function PagePreview({ title }) {
+  if (title === 'Workouts') return <><div className="landing-preview-card"><div className="flex items-center justify-between gap-2"><strong>Chest and Back day</strong><span className="bg-[var(--accent)] px-2 py-1 text-[8px] font-extrabold text-white">START DAY</span></div><p className="mt-2 text-[9px] text-[var(--n-600)]">Last completed 17-09-26</p>{['Incline Dumbbell Press', 'Barbell Row', 'Lat Pulldown'].map((name, index) => <div key={name} className="flex justify-between border-t border-[var(--hairline)] py-2 text-[10px]"><span>{name}</span><span className="text-[var(--n-600)]">{index + 3} sets</span></div>)}</div><div className="landing-preview-card flex items-center justify-between"><strong>Arms and Shoulders</strong><span className="text-[9px] text-[var(--n-600)]">5 exercises</span></div><div className="border-2 border-dashed border-[var(--divider)] p-2 text-[10px] font-extrabold">+ Add Day</div></>
+  if (title === 'Body Metrics') return <><div className="grid grid-cols-3 gap-px border-2 border-[var(--divider)] bg-[var(--divider)]">{[['Body Fat', '18.4%'], ['Weight', '84.2 kg'], ['Waist', '86 cm']].map(([label, value]) => <div key={label} className="bg-[var(--surface)] p-2"><p className="text-[8px] uppercase text-[var(--n-600)]">{label}</p><p className="num mt-1 text-sm">{value}</p><p className="mt-1 text-[8px] text-[var(--n-600)]">−0.6 since last</p></div>)}</div><p className="mt-3 border-t-2 border-[var(--divider)] pt-2 text-xs font-extrabold">New measurement</p><div className="grid grid-cols-2 gap-2">{['weight', 'waist', 'neck', 'height'].map(field => <div key={field}><p className="mb-1 text-[9px] font-bold">{field}</p><div className="num border-2 border-[var(--divider)] px-2 py-1 text-[11px]">{field === 'weight' ? '84.2' : field === 'waist' ? '86' : field === 'neck' ? '38' : '180'}</div></div>)}</div><div className="mt-3 flex items-center justify-between border-y-2 border-[var(--divider)] py-2"><div><p className="text-[8px] uppercase text-[var(--n-600)]">Estimated body fat</p><p className="num text-2xl">18.4%</p></div><span className="bg-[var(--accent)] px-3 py-2 text-[10px] font-extrabold text-white">SAVE</span></div></>
+  if (title === 'Data') return <><p className="border-b-2 border-[var(--divider)] pb-2 text-[9px] font-extrabold tracking-[.12em]">SEPTEMBER 2026</p>{[['Chest and Back day', '17-09-26', '58m', '4,820kg'], ['Legs', '15-09-26', '1h 04m', '7,150kg'], ['Arms and Shoulders', '13-09-26', '47m', '3,640kg']].map(([name, date, time, total], index) => <div key={name} className="border-b-2 border-[var(--divider)] py-3"><div className="grid grid-cols-[1fr_auto_14px] items-center gap-2"><span><strong className="block text-[11px]">{name}</strong><span className="text-[9px] text-[var(--n-600)]">{date}</span></span><span className="text-right text-[8px] uppercase text-[var(--n-600)]">{time}<br />{total} volume</span><span className="text-[var(--accent)]">{index === 0 ? '−' : '+'}</span></div>{index === 0 && <div className="mt-2 border-t border-[var(--hairline)] pt-2 text-[9px]"><p className="font-extrabold">Incline Dumbbell Press</p><p className="mt-1 text-[var(--n-600)]">Set 1 &nbsp; 34kg &nbsp; 10 reps</p><p className="text-[var(--n-600)]">Set 2 &nbsp; 34kg &nbsp; 9 reps</p></div>}</div>)}</>
+  return <><div className="grid grid-cols-2 border-2 border-[var(--divider)]"><span className="p-2 text-center text-[9px] font-extrabold uppercase">Body</span><span className="bg-[var(--ink)] p-2 text-center text-[9px] font-extrabold uppercase text-white">Strength</span></div><div className="mt-2 grid grid-cols-5 border-2 border-[var(--divider)] text-center text-[9px] font-extrabold"><span className="p-2">1M</span><span className="bg-[var(--ink)] p-2 text-white">3M</span><span className="p-2">6M</span><span className="p-2">1Y</span><span className="p-2">ALL</span></div><div className="mt-2 grid grid-cols-3 gap-px border-2 border-[var(--divider)] bg-[var(--divider)]">{[['Top set', '34kg'], ['Change', '+6kg'], ['Est. 1RM', '45.3kg']].map(([label, value]) => <div key={label} className="bg-[var(--surface)] p-2"><p className="text-[8px] uppercase text-[var(--n-600)]">{label}</p><p className="num mt-1 text-sm">{value}</p></div>)}</div><div className="mt-2 border-2 border-[var(--divider)] bg-[var(--surface)] p-2"><div className="h-20 border-b-2 border-[var(--divider)]"><svg viewBox="0 0 300 80" className="h-full w-full"><polyline points="8,65 58,55 108,58 158,40 208,32 258,22 292,10" fill="none" stroke="var(--accent)" strokeWidth="3" /><polyline points="8,72 58,67 108,60 158,57 208,48 258,43 292,36" fill="none" stroke="var(--ink)" strokeWidth="2" strokeDasharray="6 4" /></svg></div><div className="mt-2 text-[8px] text-[var(--n-600)]">Incline Press: <strong className="text-[var(--ink)]">34kg</strong> &nbsp; Barbell Row: <strong className="text-[var(--ink)]">70kg</strong></div></div></>
+}
 
-    const loadWorkouts = async () => {
-      try {
-        const data = await getWorkoutDays(user.uid)
-        const logs = await getWorkoutLogs(user.uid)
-        setWorkoutLogs(logs)
-        if (data.length > 0) {
-          setDays(data.map(day => ({ ...day, isCollapsed: Boolean(day.isCollapsed), isStarted: Boolean(day.isStarted) })))
-        } else {
-          const defaultDays = [
-            { id: 1, name: 'Chest and Back day', isCollapsed: false, isStarted: false, exercises: [] },
-            { id: 2, name: 'Arms and Shoulders', isCollapsed: false, isStarted: false, exercises: [] },
-            { id: 3, name: 'Legs', isCollapsed: false, isStarted: false, exercises: [] },
-          ]
-          setDays(defaultDays)
-          await saveWorkoutDays(user.uid, defaultDays)
-        }
-
-      } catch (error) {
-        console.error('Error loading workouts:', error)
-        setLoadError(error?.code || error?.message || 'Unable to load workouts from Firebase.')
-      }
-      setLoading(false)
-    }
-
-    loadWorkouts()
-  }, [user, authLoading, router])
-
-  // Save to Firebase whenever days change
-  useEffect(() => {
-    if (!loading && user && days.length > 0) {
-      saveWorkoutDays(user.uid, days)
-    }
-  }, [days, loading, user])
-
-  const handleDayNameChange = (id, newName) => {
-    setDays(days.map(day =>
-      day.id === id ? { ...day, name: newName } : day
-    ))
-  }
-
-  const handleToggleDayCollapse = (id, collapsed) => {
-    setDays(days.map(day =>
-      day.id === id ? { ...day, isCollapsed: collapsed } : day
-    ))
-  }
-
-  const handleToggleDayStart = async (id, started) => {
-    const nextDayId = started ? id : null
-
-    setDays(days.map(day => ({
-      ...day,
-      isStarted: day.id === nextDayId,
-    })))
-
-    if (started) {
-      await startSession({ dayId: id }).catch(error => {
-        console.error('Failed to save workout start:', error)
-      })
-      router.push('/session')
-    } else {
-      handleEndDay()
-    }
-  }
-
-  const handleAddDay = () => {
-    const newDay = {
-      id: Date.now(),
-      name: 'New Day',
-      isCollapsed: false,
-      isStarted: false,
-      exercises: [],
-    }
-
-    setDays(prevDays => [...prevDays, newDay])
-  }
-
-  const handleRemoveDay = (dayId) => {
-    const removedDay = days.find(day => day.id === dayId)
-
-    setDays(prevDays => prevDays.filter(day => day.id !== dayId))
-
-    if (removedDay?.isStarted) {
-      endSession().catch(error => console.error('Failed to end removed day session:', error))
-    }
-  }
-
-  const handleAddExercise = (dayId) => {
-    setDays(days.map(day => {
-      if (day.id === dayId) {
-        const newExercise = {
-          id: Date.now(),
-          name: 'New Exercise',
-          isStarted: false,
-          isCompleted: false,
-          isCollapsed: false,
-          markForIncrease: false,
-          sets: [
-            { setNumber: 1, previousWeight: 0, previousReps: 0, currentWeight: '', currentReps: '' },
-            { setNumber: 2, previousWeight: 0, previousReps: 0, currentWeight: '', currentReps: '' },
-            { setNumber: 3, previousWeight: 0, previousReps: 0, currentWeight: '', currentReps: '' },
-          ]
-        }
-        return { ...day, exercises: [...day.exercises, newExercise] }
-      }
-      return day
-    }))
-  }
-
-  const handleRemoveExercise = (dayId, exerciseId) => {
-    setDays(days.map(day => {
-      if (day.id === dayId) {
-        return { ...day, exercises: day.exercises.filter(ex => ex.id !== exerciseId) }
-      }
-      return day
-    }))
-  }
-
-  const handleUpdateExercise = (dayId, exerciseId, updatedExercise) => {
-    setDays(days.map(day => {
-      if (day.id === dayId) {
-        return {
-          ...day,
-          exercises: day.exercises.map(ex =>
-            ex.id === exerciseId ? updatedExercise : ex
-          )
-        }
-      }
-      return day
-    }))
-  }
-
-  const handleEndDay = async () => {
-    const activeDay = days.find(day => day.isStarted)
-    const activeDayId = activeDay?.id
-
-    if (activeDayId) {
-      setDays(days.map(day => (
-        day.id === activeDayId ? { ...day, isStarted: false } : day
-      )))
-    }
-
-    if (!workoutSession.startedAt) return
-
-    try {
-      const finalSession = await endSession()
-      if (!finalSession) return
-      const endedAt = finalSession.endedAt
-
-      const completedExercises = (activeDay?.exercises || [])
-        .filter(exercise => exercise.isCompleted)
-        .map(exercise => ({
-          id: exercise.id,
-          name: exercise.name,
-          completedAt: exercise.completedAt || endedAt,
-          sets: exercise.sets
-            .filter(set => set.currentWeight !== '' && set.currentReps !== '')
-            .map(set => ({
-              setNumber: set.setNumber,
-              weight: set.currentWeight,
-              reps: set.currentReps,
-              loggedAt: exercise.completedAt || endedAt,
-            })),
-        }))
-        .filter(exercise => exercise.sets.length > 0)
-
-      await saveWorkoutLog(user.uid, {
-        dayId: activeDayId,
-        dayName: activeDay?.name || 'Workout Day',
-        startedAt: finalSession.startedAt,
-        endedAt: finalSession.endedAt,
-        durationMs: finalSession.durationMs,
-        exercises: completedExercises,
-      })
-    } catch (error) {
-      console.error('Failed to save workout session or log:', error)
-    }
-  }
-
-  useEffect(() => registerEndHandler(handleEndDay), [registerEndHandler, workoutSession, days])
-
-  const startedDayId = days.find(day => day.isStarted)?.id
-  const visibleDays = startedDayId ? days.filter(day => day.id === startedDayId) : days
-
-  const getLastCompletedDate = (dayId) => workoutLogs.find(log => log.dayId === dayId)?.endedAt || null
-
-  if (authLoading || loading) {
-    return <div className="min-h-screen bg-page px-5 py-10 text-center font-dark">Loading...</div>
-  }
-
-  if (!user) {
-    return null
-  }
-
-  if (loadError) {
-    return <div className="min-h-screen bg-page px-5 py-10 text-center font-dark">Firebase error: {loadError}</div>
-  }
-
+function PhonePreview() {
   return (
-    <>
-      <AppNav />
-
-      <main>
-        <h1 className="mb-8 text-3xl font-bold text-slate-800">Workout Tracker</h1>
-        <div className="flex flex-col gap-5">
-          {visibleDays.map(day => (
-            <WorkoutDay
-              key={day.id}
-              day={day}
-              onDayNameChange={handleDayNameChange}
-              onToggleCollapse={handleToggleDayCollapse}
-              onToggleDayStart={handleToggleDayStart}
-              onRemoveDay={handleRemoveDay}
-              onAddExercise={handleAddExercise}
-              onRemoveExercise={handleRemoveExercise}
-              onUpdateExercise={handleUpdateExercise}
-              homeMode
-              lastCompletedAt={getLastCompletedDate(day.id)}
-            />
-          ))}
+    <div className="landing-phone">
+      <div className="landing-phone-header">
+        <div className="flex items-center gap-3 p-3">
+          <div className="min-w-0 flex-1"><p className="m-0 text-[9px] font-extrabold uppercase tracking-[.12em] text-[var(--accent)]">20/09/2026</p><p className="m-0 text-[15px] font-extrabold">Chest and Back day</p></div>
+          <span className="bg-[var(--accent)] px-3 py-2 text-[9px] font-extrabold text-white">END</span>
         </div>
+        <div className="bg-[var(--ink)] p-3 text-white"><div className="flex items-center justify-between text-[8px] uppercase tracking-[.08em] text-[var(--n-300)]"><span>Workout timer</span><span className="bg-[var(--accent)] px-2 py-1 font-extrabold text-white">In progress</span></div><div className="num mt-1 text-3xl">00:42:18</div></div>
+      </div>
+      <div className="border-b-2 border-[var(--accent)] bg-[var(--accent-100)] p-3"><div className="flex flex-wrap items-center gap-2 text-xs font-semibold"><span>Incline Dumbbell Press</span><span className="bg-white px-2 py-1 text-[8px] font-extrabold text-[var(--accent)]">IN PROGRESS</span></div><div className="mt-2 flex gap-2"><span className="bg-[var(--accent)] px-2 py-1 text-[8px] font-extrabold text-white">UP NEXT</span><span className="border border-[var(--divider)] px-2 py-1 text-[8px] font-extrabold">PR 34KG</span></div><div className="mt-3 border-y-2 border-[var(--divider)]"><div className="grid grid-cols-[22px_1fr_40px_36px_26px] gap-1 py-2 text-[8px] font-extrabold uppercase tracking-wide text-[var(--n-600)]"><span>Set</span><span>Last</span><span>Kg</span><span>Reps</span><span /></div>{[1, 2, 3].map((set, index) => <div key={set} className={`grid grid-cols-[22px_1fr_40px_36px_26px] items-center gap-1 border-t border-[var(--hairline)] py-2 text-[10px] ${index < 2 ? 'opacity-45' : ''}`}><span className="num">{set}</span><span className="text-[9px] text-[var(--n-600)]">32kg / 10</span><span className="num">34</span><span className="num">{index === 2 ? '8' : '10'}</span><span className="flex h-6 items-center justify-center border-2 border-[var(--accent)] text-[var(--accent)]"><Check size={12} /></span></div>)}</div><span className="mt-3 inline-block bg-[var(--accent)] px-3 py-2 text-[9px] font-extrabold text-white">+ ADD SET</span></div>
+      <div className="border-b border-[var(--hairline)] p-3 text-xs font-semibold">Barbell Row <span className="ml-2 border border-[var(--divider)] px-2 py-1 text-[8px] font-extrabold">PR 70KG</span></div>
+      <div className="p-3 text-xs font-semibold text-[var(--n-600)]">Lat Pulldown</div>
+      <div className="grid grid-cols-4 border-t-2 border-[var(--divider)] bg-[var(--surface)] py-2 text-center text-[8px] font-extrabold uppercase tracking-wide text-[var(--n-600)]"><span className="text-[var(--accent)]">⚖<br />Workouts</span><span>◉<br />Metrics</span><span>▤<br />Data</span><span>▥<br />Stats</span></div>
+    </div>
+  )
+}
 
-        <button
-          type="button"
-          onClick={handleAddDay}
-          className="mt-6 w-full rounded-2xl border-2 border-dashed border-slate-800 bg-transparent p-2 text-left transition-opacity hover:opacity-95"
-        >
-          <span className="flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-base font-semibold text-slate-900">
-            <Plus size={17} />
-            Add Day
-          </span>
-        </button>
-      </main>
-    </>
+export default function LandingPage() {
+  return (
+    <div className="landing-shell">
+      <div className="landing-container">
+        <nav className="landing-nav">
+          <span className="landing-brand">Training App</span>
+          <span className="hidden border-l border-[var(--divider)] pl-6 text-xs text-[var(--n-600)] sm:inline">Strength & body composition tracker</span>
+          <span className="flex-1" />
+          <div className="landing-links flex gap-5 text-[13px] font-semibold"><a href="#pages">Pages</a><a href="#features">Features</a><a href="#stack">Stack</a></div>
+          <div className="flex gap-2"><Link href="/login" className="landing-btn landing-btn-secondary">Login</Link><Link href="/login?mode=register" className="landing-btn landing-btn-primary">Register</Link></div>
+        </nav>
+
+        <section className="landing-hero">
+          <div><p className="landing-kicker">Progressive overload, logged in one tap</p><h1>A training log built for the gym floor, not the desk.</h1><p className="landing-hero-copy">Training App tracks every set against the last time you did it. Open your day, start the session, and each row is already filled with what you lifted last week.</p><p className="landing-hero-copy mt-4">Body composition, raw session data and strength trends live behind the same four tabs. It installs to the home screen and keeps the screen awake while you train.</p><div className="landing-actions"><a href="#pages" className="landing-btn landing-btn-primary">See the pages</a><a href="#features" className="landing-btn landing-btn-secondary">What it does</a></div></div>
+          <div className="flex justify-center"><PhonePreview /></div>
+        </section>
+
+        <div className="landing-stat-grid"><div className="landing-stat"><strong className="num">1 tap</strong><span className="text-xs text-[var(--n-600)]">to confirm a prefilled set</span></div><div className="landing-stat"><strong className="num">5</strong><span className="text-xs text-[var(--n-600)]">exercises chartable at once</span></div><div className="landing-stat"><strong className="num">44px</strong><span className="text-xs text-[var(--n-600)]">minimum touch target</span></div><div className="landing-stat"><strong className="num">0ms</strong><span className="text-xs text-[var(--n-600)]">screen sleep during a session</span></div></div>
+
+        <section id="pages" className="landing-section"><p className="landing-kicker">The pages</p><h2 className="text-4xl">Four tabs and a session view.</h2><p className="landing-page-copy mt-3 mb-10 max-w-[60ch] text-base">Everything is one level deep. Nothing is behind a menu.</p><div className="landing-page-grid">{pageCards.map(({ title, description, icon: Icon }) => <div key={title}><div className="landing-preview"><Icon size={22} className="text-[var(--accent)]" /><h3 className="mt-5 text-xl">{title}</h3><PagePreview title={title} /></div><h3 className="mt-6 text-xl">{title}</h3><p className="landing-page-copy">{description}</p></div>)}</div></section>
+
+        <section id="features" className="landing-section landing-section-rule"><p className="landing-kicker">Features</p><h2 className="text-4xl mb-10">Built around the set you are about to do.</h2><div className="landing-feature-grid">{features.map(([title, description]) => <div className="landing-feature" key={title}><h3>{title}</h3><p>{description}</p></div>)}</div></section>
+
+        <section id="stack" className="landing-section landing-section-rule"><div className="grid gap-10 md:grid-cols-2"><div><p className="landing-kicker">Under the hood</p><h2 className="text-3xl">Next.js, React and Firestore.</h2><p className="landing-page-copy mt-4">A focused strength tracker with Firebase Authentication, Firestore persistence, Lucide icons, a standalone PWA manifest and lightweight SVG charts.</p></div><div className="border-t-2 border-[var(--divider)]"><div className="flex justify-between border-b border-[var(--hairline)] py-3 text-sm"><strong>Framework</strong><span className="text-[var(--n-600)]">Next.js 14, React 18</span></div><div className="flex justify-between border-b border-[var(--hairline)] py-3 text-sm"><strong>Data</strong><span className="text-[var(--n-600)]">Cloud Firestore</span></div><div className="flex justify-between border-b border-[var(--hairline)] py-3 text-sm"><strong>Auth</strong><span className="text-[var(--n-600)]">Firebase Authentication</span></div><div className="flex justify-between py-3 text-sm"><strong>Icons</strong><span className="text-[var(--n-600)]">Lucide</span></div></div></div></section>
+      </div>
+
+      <footer className="landing-footer"><div className="landing-container landing-footer-inner"><p className="mb-7 max-w-[20ch] text-5xl leading-none tracking-[-.03em]">Log the set. Not the app.</p><Link href="/login?mode=register" className="landing-btn bg-white text-[var(--accent)]">Register</Link></div></footer>
+    </div>
   )
 }

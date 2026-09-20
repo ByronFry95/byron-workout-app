@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Check, ChevronDown, ChevronUp, ChevronUp as WeightUp, Minus, Pencil, Play, Plus, Square, X } from 'lucide-react'
 
 export default function Exercise({ exercise, dayId, isExpanded, isOtherExerciseExpanded, homeMode = false, editMode = false, sessionMode = false, onExpand, onCollapse, onRemove, onUpdate }) {
@@ -15,6 +15,14 @@ export default function Exercise({ exercise, dayId, isExpanded, isOtherExerciseE
   const [undoState, setUndoState] = useState(null)
   const [activeSetEditor, setActiveSetEditor] = useState(null)
   const [completedSetNumbers, setCompletedSetNumbers] = useState(new Set())
+  const autoStarted = useRef(false)
+
+  useEffect(() => {
+    if (sessionMode && !autoStarted.current && !isStarted && !exercise.isCompleted) {
+      autoStarted.current = true
+      handleStartExercise()
+    }
+  }, [sessionMode, isStarted, exercise.isCompleted])
 
   useEffect(() => {
     if (isExpanded && isCollapsed) {
@@ -176,12 +184,6 @@ export default function Exercise({ exercise, dayId, isExpanded, isOtherExerciseE
     onUpdate({ ...exercise, sets: updatedSets, isStarted, isCollapsed, markForIncrease })
   }
 
-  const getDeltaTone = (delta) => {
-    if (delta > 0) return 'text-emerald-300'
-    if (delta < 0) return 'text-rose-300'
-    return 'text-slate-400'
-  }
-
   return (
     <div data-exercise-card className={`exercise-card relative w-full min-w-0 overflow-hidden border-b-2 p-3 text-[var(--ink)] transition-all duration-300 sm:p-4 ${isStarted ? 'border-[var(--accent)] bg-[var(--accent-100)]' : 'border-[var(--hairline)] bg-[var(--bg)]'}`} onClick={handleCardTap}>
       <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -296,10 +298,7 @@ export default function Exercise({ exercise, dayId, isExpanded, isOtherExerciseE
             const previousReps = Number(set.previousReps || 0)
             const currentWeight = Number(set.currentWeight || 0)
             const currentReps = Number(set.currentReps || 0)
-            const weightDelta = currentWeight - previousWeight
-            const repDelta = currentReps - previousReps
-
-            const isSetComplete = completedSetNumbers.has(set.setNumber)
+            const isSetComplete = Boolean(set.loggedAt) || completedSetNumbers.has(set.setNumber)
 
             return (
               <div key={set.setNumber} className={`grid min-h-12 grid-cols-[2.5rem_1fr_1fr_1fr_2.75rem] items-center gap-2 border-b border-[var(--hairline)] px-1 py-1 ${isSetComplete ? 'opacity-45' : ''}`}>
@@ -325,15 +324,16 @@ export default function Exercise({ exercise, dayId, isExpanded, isOtherExerciseE
 
       {activeSetEditor && (() => {
         const activeSet = sets.find(set => set.setNumber === activeSetEditor.setNumber)
-        const fieldLabel = activeSetEditor.field === 'currentWeight' ? 'Weight' : 'Reps'
+        const fieldLabel = 'Set values'
         const step = activeSetEditor.field === 'currentWeight' ? 2.5 : 1
         return (
           <div className="fixed inset-0 z-50 flex items-end bg-black/40" onClick={() => setActiveSetEditor(null)}>
             <div className="w-full border-t-2 border-[var(--divider)] bg-[var(--surface)] p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))]" onClick={event => event.stopPropagation()}>
               <div className="mx-auto mb-4 h-1 w-12 bg-[var(--n-500)]" />
               <div className="mb-4 flex items-center justify-between"><h3 className="text-xl">Set {activeSetEditor.setNumber} {fieldLabel}</h3><button type="button" onClick={() => setActiveSetEditor(null)} className="flex h-11 w-11 items-center justify-center border-0 bg-transparent"><X size={20} /></button></div>
-              <div className="flex items-center justify-center gap-5"><button type="button" onClick={() => adjustSetValue(activeSetEditor.setNumber, activeSetEditor.field, -step)} className="flex h-11 w-11 items-center justify-center border-2 border-[var(--divider)]"><Minus size={18} /></button><span className="num text-4xl">{activeSet?.[activeSetEditor.field] || 0}</span><button type="button" onClick={() => adjustSetValue(activeSetEditor.setNumber, activeSetEditor.field, step)} className="flex h-11 w-11 items-center justify-center border-2 border-[var(--divider)]"><Plus size={18} /></button></div>
-              <input type="text" inputMode="decimal" pattern="[0-9]*[.,]?[0-9]*" value={activeSet?.[activeSetEditor.field] || ''} onChange={event => handleSetChange(activeSetEditor.setNumber, activeSetEditor.field, event.target.value)} className="mt-4 min-h-11 w-full border-2 border-[var(--divider)] bg-transparent px-3 num text-2xl" />
+              <div className="grid grid-cols-2 gap-3">
+                {['currentWeight', 'currentReps'].map(field => <div key={field}><label className="text-xs font-bold uppercase text-[var(--n-600)]">{field === 'currentWeight' ? 'Weight' : 'Reps'}</label><div className="mt-1 flex items-center gap-2"><button type="button" onClick={() => adjustSetValue(activeSetEditor.setNumber, field, field === 'currentWeight' ? -2.5 : -1)} className="flex h-11 w-11 shrink-0 items-center justify-center border-2 border-[var(--divider)]"><Minus size={18} /></button><input type="text" inputMode="decimal" pattern="[0-9]*[.,]?[0-9]*" value={activeSet?.[field] || ''} onChange={event => handleSetChange(activeSetEditor.setNumber, field, event.target.value)} className="min-h-11 min-w-0 w-full border-2 border-[var(--divider)] bg-transparent px-2 num text-xl" /><button type="button" onClick={() => adjustSetValue(activeSetEditor.setNumber, field, field === 'currentWeight' ? 2.5 : 1)} className="flex h-11 w-11 shrink-0 items-center justify-center border-2 border-[var(--divider)]"><Plus size={18} /></button></div></div>)}
+              </div>
               <button type="button" onClick={() => handleSaveSet(activeSetEditor.setNumber)} className="mt-4 min-h-11 w-full bg-[var(--accent)] font-bold text-white">LOG SET</button>
             </div>
           </div>
