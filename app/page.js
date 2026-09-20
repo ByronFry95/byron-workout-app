@@ -3,22 +3,20 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/authContext'
-import { getWorkoutDays, saveWorkoutDays, getWorkoutSession, saveWorkoutSession, saveWorkoutLog } from '@/lib/firebaseQueries'
+import { getWorkoutDays, getWorkoutLogs, saveWorkoutDays, saveWorkoutLog } from '@/lib/firebaseQueries'
+import { useWorkoutSession } from '@/lib/workoutSessionContext'
 import WorkoutDay from '@/components/WorkoutDay'
-import WorkoutTimer from '@/components/WorkoutTimer'
 import AppNav from '@/components/AppNav'
+import { Plus } from 'lucide-react'
 
 export default function WorkoutsPage() {
   const { user, loading: authLoading, logout } = useAuth()
+  const { session: workoutSession, startSession, endSession, registerEndHandler } = useWorkoutSession()
   const router = useRouter()
   const [days, setDays] = useState([])
   const [loading, setLoading] = useState(true)
-  const [workoutSession, setWorkoutSession] = useState({
-    startedAt: null,
-    endedAt: null,
-    durationMs: 0,
-  })
   const [loadError, setLoadError] = useState('')
+  const [workoutLogs, setWorkoutLogs] = useState([])
 
   // Load from Firebase on mount
   useEffect(() => {
@@ -32,6 +30,8 @@ export default function WorkoutsPage() {
     const loadWorkouts = async () => {
       try {
         const data = await getWorkoutDays(user.uid)
+        const logs = await getWorkoutLogs(user.uid)
+        setWorkoutLogs(logs)
         if (data.length > 0) {
           setDays(data.map(day => ({ ...day, isCollapsed: Boolean(day.isCollapsed), isStarted: Boolean(day.isStarted) })))
         } else {
@@ -44,10 +44,6 @@ export default function WorkoutsPage() {
           await saveWorkoutDays(user.uid, defaultDays)
         }
 
-        const session = await getWorkoutSession(user.uid)
-        if (session) {
-          setWorkoutSession(session)
-        }
       } catch (error) {
         console.error('Error loading workouts:', error)
         setLoadError(error?.code || error?.message || 'Unable to load workouts from Firebase.')
@@ -77,7 +73,7 @@ export default function WorkoutsPage() {
     ))
   }
 
-  const handleToggleDayStart = (id, started) => {
+  const handleToggleDayStart = async (id, started) => {
     const nextDayId = started ? id : null
 
     setDays(days.map(day => ({
@@ -86,12 +82,10 @@ export default function WorkoutsPage() {
     })))
 
     if (started) {
-      const startedAt = Date.now()
-      const nextSession = { startedAt, endedAt: null, durationMs: 0 }
-      setWorkoutSession(nextSession)
-      saveWorkoutSession(user.uid, nextSession).catch(error => {
+      await startSession({ dayId: id }).catch(error => {
         console.error('Failed to save workout start:', error)
       })
+      router.push('/session')
     } else {
       handleEndDay()
     }
@@ -115,11 +109,7 @@ export default function WorkoutsPage() {
     setDays(prevDays => prevDays.filter(day => day.id !== dayId))
 
     if (removedDay?.isStarted) {
-      setWorkoutSession({
-        startedAt: null,
-        endedAt: null,
-        durationMs: 0,
-      })
+      endSession().catch(error => console.error('Failed to end removed day session:', error))
     }
   }
 
@@ -180,18 +170,10 @@ export default function WorkoutsPage() {
 
     if (!workoutSession.startedAt) return
 
-    const endedAt = Date.now()
-    const durationMs = endedAt - workoutSession.startedAt
-    const nextSession = {
-      startedAt: workoutSession.startedAt,
-      endedAt,
-      durationMs,
-    }
-
-    setWorkoutSession(nextSession)
-
     try {
-      await saveWorkoutSession(user.uid, nextSession)
+      const finalSession = await endSession()
+      if (!finalSession) return
+      const endedAt = finalSession.endedAt
 
       const completedExercises = (activeDay?.exercises || [])
         .filter(exercise => exercise.isCompleted)
@@ -213,15 +195,17 @@ export default function WorkoutsPage() {
       await saveWorkoutLog(user.uid, {
         dayId: activeDayId,
         dayName: activeDay?.name || 'Workout Day',
-        startedAt: workoutSession.startedAt,
-        endedAt,
-        durationMs,
+        startedAt: finalSession.startedAt,
+        endedAt: finalSession.endedAt,
+        durationMs: finalSession.durationMs,
         exercises: completedExercises,
       })
     } catch (error) {
       console.error('Failed to save workout session or log:', error)
     }
   }
+
+  useEffect(() => registerEndHandler(handleEndDay), [registerEndHandler, workoutSession, days])
 
   const handleLogout = async () => {
     try {
@@ -234,6 +218,8 @@ export default function WorkoutsPage() {
 
   const startedDayId = days.find(day => day.isStarted)?.id
   const visibleDays = startedDayId ? days.filter(day => day.id === startedDayId) : days
+
+  const getLastCompletedDate = (dayId) => workoutLogs.find(log => log.dayId === dayId)?.endedAt || null
 
   if (authLoading || loading) {
     return <div className="min-h-screen bg-page px-5 py-10 text-center font-dark">Loading...</div>
@@ -253,10 +239,6 @@ export default function WorkoutsPage() {
 
       <main className="py-5">
         <h1 className="mb-8 text-3xl font-bold text-slate-800">Workout Tracker</h1>
-        <WorkoutTimer
-          session={workoutSession}
-          onEndDay={handleEndDay}
-        />
         <div className="flex flex-col gap-5">
           {visibleDays.map(day => (
             <WorkoutDay
@@ -269,6 +251,8 @@ export default function WorkoutsPage() {
               onAddExercise={handleAddExercise}
               onRemoveExercise={handleRemoveExercise}
               onUpdateExercise={handleUpdateExercise}
+              homeMode
+              lastCompletedAt={getLastCompletedDate(day.id)}
             />
           ))}
         </div>
@@ -279,7 +263,7 @@ export default function WorkoutsPage() {
           className="mt-6 w-full rounded-2xl border-2 border-dashed border-slate-800 bg-transparent p-2 text-left transition-opacity hover:opacity-95"
         >
           <span className="flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-base font-semibold text-slate-900">
-            <span className="text-xl leading-none">＋</span>
+            <Plus size={17} />
             Add Day
           </span>
         </button>

@@ -8,6 +8,7 @@ import { getMetricsHistory, saveMetrics, deleteMetricsEntry } from '@/lib/fireba
 import { calculateBodyFatNavy, getBodyFatCategory } from '@/lib/bodyFatCalculator'
 import './metrics.css'
 import AppNav from '@/components/AppNav'
+import { Trash2 } from 'lucide-react'
 
 export default function MetricsPage() {
   const { user, loading: authLoading, logout } = useAuth()
@@ -285,7 +286,7 @@ export default function MetricsPage() {
                         onClick={() => deleteEntry(entry.id)}
                         title="Delete entry"
                       >
-                        ✕
+                        <Trash2 size={16} />
                       </button>
                     </div>
                     <div className="history-body">

@@ -15,7 +15,7 @@ const formatDuration = (ms) => {
   return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
 }
 
-export default function WorkoutTimer({ session, onStartDay, onEndDay }) {
+export default function WorkoutTimer({ session, onStartDay, onEndDay, sticky = false, showEndButton = true }) {
   const [elapsedMs, setElapsedMs] = useState(0)
 
   useEffect(() => {
@@ -36,22 +36,46 @@ export default function WorkoutTimer({ session, onStartDay, onEndDay }) {
 
   const isRunning = Boolean(session?.startedAt && !session?.endedAt)
 
+  useEffect(() => {
+    if (!isRunning || !('wakeLock' in navigator)) return undefined
+
+    let wakeLock
+    const requestWakeLock = async () => {
+      try {
+        wakeLock = await navigator.wakeLock.request('screen')
+      } catch (error) {
+        console.warn('Screen wake lock unavailable:', error)
+      }
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') requestWakeLock()
+    }
+
+    requestWakeLock()
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      wakeLock?.release()
+    }
+  }, [isRunning])
+
   return (
-    <div className="bg-dark-blue mb-6 rounded-2xl p-5 text-white shadow-card">
+    <div className={`bg-dark-blue p-4 text-white ${sticky ? 'sticky top-0 z-30 mb-0 border-b-2 border-[var(--accent)]' : `mb-6 ${isRunning ? 'fixed bottom-[4.75rem] left-3 right-3 z-30 mb-0 sm:static sm:mb-6' : ''}`}`}>
       <div className="mb-2 flex items-center justify-between">
         <span className="text-[0.7rem] uppercase tracking-[0.08em] text-slate-300">Workout Timer</span>
-        <span className={`rounded-full px-2.5 py-1 text-[0.72rem] font-bold ${isRunning ? 'bg-emerald-500/20 text-emerald-200' : 'bg-white/10 text-slate-200'}`}>
+        <span className={`px-2.5 py-1 text-[0.72rem] font-bold ${isRunning ? 'bg-[var(--accent)] text-white' : 'bg-white/10 text-slate-200'}`}>
           {isRunning ? 'In Progress' : 'Ready'}
         </span>
       </div>
 
-      <div className="my-2 text-4xl font-bold tracking-[0.06em] tabular-nums sm:text-5xl">
+      <div className="num my-2 text-3xl tracking-[0.06em] sm:text-5xl">
         {formatDuration(elapsedMs)}
       </div>
 
       <div className="flex justify-end">
-        {isRunning && (
-          <button className="rounded-xl bg-amber-400 px-4 py-2.5 font-bold text-slate-900 transition-transform duration-200 hover:-translate-y-0.5" onClick={onEndDay}>
+        {isRunning && showEndButton && (
+          <button className="min-h-11 bg-[var(--accent)] px-4 py-2.5 font-bold text-white transition-transform duration-200 hover:-translate-y-0.5" onClick={onEndDay}>
             End Day
           </button>
         )}

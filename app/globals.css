@@ -1,13 +1,22 @@
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap');
 @import "tailwindcss";
 
 :root {
-  --page-bg: #f5f5f5;
-  --panel-bg: #ffffff;
-  --dark-blue: #111827;
-  --midnight-blue: #0f172a;
-  --panel-border: #374151;
-  --muted-text: #333333;
-  --primary-blue: #007bff;
+  --bg: #f3f2f2;
+  --surface: #eae9e9;
+  --ink: #201e1d;
+  --accent: #ec3013;
+  --accent-600: #dd2b0f;
+  --accent-700: #ae1800;
+  --accent-100: #fff2ef;
+  --n-300: #d7d3d3;
+  --n-500: #9b9797;
+  --n-600: #7d7979;
+  --n-700: #605d5d;
+  --divider: color-mix(in srgb, #201e1d 40%, transparent);
+  --hairline: color-mix(in srgb, #201e1d 14%, transparent);
+  --radius: 0px;
+  --tap: 44px;
 }
 
 *, *::before, *::after {
@@ -15,15 +24,14 @@
 }
 
 html {
-  background-color: var(--page-bg);
+  background-color: var(--bg);
 }
 
 body {
   margin: 0;
-  background-color: var(--page-bg);
-  color: #1f2937;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  background-color: var(--bg);
+  color: var(--ink);
+  font-family: 'Archivo', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -32,26 +40,48 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
 
+h1, h2, h3, h4 {
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  line-height: 1.12;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 main {
-  max-width: 1200px;
+  width: 100%;
   margin: 0 auto;
   padding: 20px;
 }
 
+@media (min-width: 640px) {
+  main {
+    max-width: 1200px;
+  }
+}
+
 .bg-dark-blue {
-  background-color: var(--dark-blue);
+  background-color: var(--ink);
 }
 
 .bg-midnight-blue {
-  background-color: var(--midnight-blue);
+  background-color: var(--ink);
 }
 
 .bg-page {
-  background-color: var(--page-bg);
+  background-color: var(--bg);
 }
 
 .bg-panel {
-  background-color: var(--panel-bg);
+  background-color: var(--surface);
 }
 
 .font-white {
@@ -59,33 +89,32 @@ main {
 }
 
 .font-dark {
-  color: var(--dark-blue);
+  color: var(--ink);
 }
 
 .font-muted {
-  color: var(--muted-text);
+  color: var(--n-600);
 }
 
 .panel-card {
-  background-color: var(--panel-bg);
-  border-radius: 1rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background-color: var(--surface);
+  border-radius: var(--radius);
+  border: 2px solid var(--divider);
+  box-shadow: none;
 }
 
 .soft-border {
-  border: 1px solid var(--panel-border);
+  border: 1px solid var(--hairline);
 }
 
 .day-exercise-scroll {
-  max-height: 70dvh;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-color: #94a3b8 transparent;
-  scrollbar-width: thin;
+  overflow: visible;
 }
 
 .exercise-card {
   flex-shrink: 0;
+  border-radius: var(--radius);
+  background: var(--bg);
 }
 
 @media (max-width: 639px) {
@@ -99,26 +128,26 @@ main {
 }
 
 .nav-link {
-  border-radius: 0.5rem;
+  border-radius: var(--radius);
   padding: 0.625rem 1rem;
-  font-weight: 500;
-  color: #334155;
+  font-weight: 800;
+  color: var(--ink);
   text-decoration: none;
   transition: background-color 0.2s ease;
 }
 
 .nav-link:hover {
-  background-color: #e2e8f0;
+  background-color: var(--n-300);
 }
 
 .nav-link.active {
-  background-color: #2563eb;
+  background-color: var(--accent);
   color: #ffffff;
 }
 
 .app-nav-desktop {
   margin-bottom: 1.25rem;
-  background-color: var(--panel-bg);
+  background-color: var(--surface);
   padding: 1rem 1.25rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
@@ -138,13 +167,15 @@ main {
   border: 0;
   background: transparent;
   color: #64748b;
-  font-size: 0.65rem;
-  font-weight: 600;
+  min-height: 58px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .06em;
   text-decoration: none;
 }
 
 .app-nav-item.active {
-  color: #2563eb;
+  color: var(--accent);
 }
 
 .app-nav-icon {
@@ -154,7 +185,7 @@ main {
 
 @media (max-width: 639px) {
   body {
-    padding-bottom: 5rem;
+    padding-bottom: 5.5rem;
   }
 
   .app-nav-desktop {
@@ -168,11 +199,11 @@ main {
     left: 0;
     z-index: 40;
     display: flex;
-    min-height: 4.25rem;
+    min-height: 4.75rem;
     align-items: stretch;
     gap: 0.2rem;
-    border-top: 1px solid #e2e8f0;
-    background-color: rgba(255, 255, 255, 0.96);
+    border-top: 2px solid var(--divider);
+    background-color: rgba(234, 233, 233, 0.96);
     padding: 0.5rem 0.35rem calc(0.5rem + env(safe-area-inset-bottom));
     box-shadow: 0 -4px 16px rgba(15, 23, 42, 0.08);
     backdrop-filter: blur(12px);

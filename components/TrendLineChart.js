@@ -2,7 +2,7 @@
 
 // Each series is scaled to its own min/max range so mixed units (kg/cm) or very
 // different exercise loads can share one compact chart without a numeric y-axis.
-export default function TrendLineChart({ series, height = 170, emptyMessage = 'No data yet.' }) {
+export default function TrendLineChart({ series, height = 170, emptyMessage = 'No data yet.', normalize = false }) {
   const visibleSeries = series.filter(s => s.points.length > 0)
 
   if (visibleSeries.length === 0) {
@@ -27,16 +27,19 @@ export default function TrendLineChart({ series, height = 170, emptyMessage = 'N
   const xRange = xMax - xMin || 1
   const scaleX = (x) => padding.left + ((x - xMin) / xRange) * plotWidth
 
+  const allY = visibleSeries.flatMap(s => s.points.map(p => p.y))
+  const sharedMin = Math.min(...allY)
+  const sharedMax = Math.max(...allY)
+  const sharedRange = sharedMax - sharedMin || 1
+
   const preparedSeries = visibleSeries.map(s => {
     const yValues = s.points.map(p => p.y)
-    const yMin = Math.min(...yValues)
-    const yMax = Math.max(...yValues)
-    const yRange = yMax - yMin
+    const yMin = normalize ? Math.min(...yValues) : sharedMin
+    const yMax = normalize ? Math.max(...yValues) : sharedMax
+    const yRange = yMax - yMin || 1
 
     const coords = s.points.map(p => {
-      const cy = yRange === 0
-        ? padding.top + plotHeight / 2
-        : padding.top + (1 - (p.y - yMin) / yRange) * plotHeight
+      const cy = padding.top + (1 - (p.y - yMin) / yRange) * plotHeight
       return { cx: scaleX(p.x), cy }
     })
 
@@ -45,7 +48,7 @@ export default function TrendLineChart({ series, height = 170, emptyMessage = 'N
 
   return (
     <div className="w-full overflow-hidden rounded-xl border border-slate-200 bg-white p-3">
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full" style={{ height }} preserveAspectRatio="none">
+      <svg viewBox={`0 0 ${width} ${height}`} className="w-full" style={{ height }}>
         {[0.25, 0.5, 0.75].map(fraction => (
           <line
             key={fraction}
@@ -65,6 +68,7 @@ export default function TrendLineChart({ series, height = 170, emptyMessage = 'N
             fill="none"
             stroke={s.color}
             strokeWidth="2.5"
+            strokeDasharray={s.dash || undefined}
             strokeLinecap="round"
             strokeLinejoin="round"
           />
@@ -79,6 +83,11 @@ export default function TrendLineChart({ series, height = 170, emptyMessage = 'N
         <text x={padding.left} y={height - 4} fontSize="10" fill="#94a3b8">
           {new Date(xMin).toLocaleDateString('en-GB')}
         </text>
+        {!normalize && [sharedMax, (sharedMax + sharedMin) / 2, sharedMin].map((value, index) => (
+          <text key={value} x={width - padding.right} y={padding.top + (plotHeight * index) + 4} fontSize="10" fill="#94a3b8" textAnchor="end">
+            {Number(value).toFixed(0)}
+          </text>
+        ))}
         <text x={width - padding.right} y={height - 4} fontSize="10" fill="#94a3b8" textAnchor="end">
           {new Date(xMax).toLocaleDateString('en-GB')}
         </text>

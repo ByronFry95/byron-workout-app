@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Exercise from './Exercise'
+import { ChevronDown, ChevronUp, Minus, Pencil, Plus, X } from 'lucide-react'
 
 export default function WorkoutDay({
   day,
@@ -11,9 +12,13 @@ export default function WorkoutDay({
   onRemoveDay,
   onAddExercise,
   onRemoveExercise,
-  onUpdateExercise
+  onUpdateExercise,
+  homeMode = false,
+  sessionMode = false,
+  lastCompletedAt = null
 }) {
   const [isEditingName, setIsEditingName] = useState(false)
+  const [isEditingExercises, setIsEditingExercises] = useState(false)
   const [editedName, setEditedName] = useState(day.name)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [expandedExerciseId, setExpandedExerciseId] = useState(null)
@@ -22,6 +27,8 @@ export default function WorkoutDay({
   const dragStartX = useRef(0)
   const currentDragX = useRef(0)
   const didSwipe = useRef(false)
+  const startY = useRef(0)
+  const axisLocked = useRef(false)
   const exerciseScrollRef = useRef(null)
   const previousExerciseCount = useRef(day.exercises.length)
 
@@ -62,6 +69,8 @@ export default function WorkoutDay({
     if (event.pointerType === 'mouse' && event.button !== 0) return
     setIsDragging(true)
     dragStartX.current = event.clientX
+    startY.current = event.clientY
+    axisLocked.current = false
     currentDragX.current = 0
     didSwipe.current = false
     event.currentTarget.setPointerCapture?.(event.pointerId)
@@ -70,6 +79,11 @@ export default function WorkoutDay({
   const handlePointerMove = (event) => {
     if (!isDragging || event.target.closest('[data-exercise-card]')) return
     const delta = event.clientX - dragStartX.current
+    const verticalDelta = event.clientY - startY.current
+    if (!axisLocked.current && Math.abs(delta) > 10) {
+      axisLocked.current = Math.abs(delta) > Math.abs(verticalDelta)
+    }
+    if (!axisLocked.current) return
     if (delta < 0) {
       const nextDragX = Math.max(delta, -140)
       currentDragX.current = nextDragX
@@ -103,10 +117,14 @@ export default function WorkoutDay({
     setExpandedExerciseId(previous => previous === exerciseId ? null : previous)
   }
 
+  const exerciseCount = day.exercises.length
+  const setCount = day.exercises.reduce((total, exercise) => total + exercise.sets.length, 0)
+  const lastCompletedLabel = lastCompletedAt ? new Date(lastCompletedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : 'Never'
+
   return (
-    <div className="relative overflow-hidden rounded-2xl">
+    <div className={`relative overflow-hidden ${homeMode || sessionMode ? '' : 'border-2 border-[var(--divider)]'}`}>
       <div
-        className="panel-card relative z-10 overflow-hidden p-5 transition-transform duration-200 ease-out"
+        className={`relative z-10 overflow-hidden transition-transform duration-200 ease-out ${homeMode || sessionMode ? 'bg-transparent' : 'panel-card p-5'}`}
         style={{ transform: `translateX(${dragX}px)` }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
@@ -114,7 +132,7 @@ export default function WorkoutDay({
         onPointerCancel={handlePointerUp}
         onClick={handleCardTap}
       >
-        <div className="mb-4 flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
+        {!sessionMode && !homeMode && <div className="mb-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0 w-full sm:flex-1">
             {isEditingName ? (
               <input
@@ -124,10 +142,10 @@ export default function WorkoutDay({
                 onBlur={handleSaveName}
                 onKeyDown={handleKeyDown}
                 autoFocus
-                className="w-full rounded-md border-2 border-blue-500 px-2 py-2 text-xl font-semibold text-slate-800"
+                className="w-full border-2 border-[var(--accent)] bg-[var(--surface)] px-2 py-2 text-xl font-semibold text-[var(--ink)]"
               />
             ) : (
-              <div className="flex min-w-0 items-start gap-2 px-2 py-2">
+              <div className="flex min-w-0 items-center gap-2">
                 <button
                   type="button"
                   className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-slate-300 bg-slate-100 text-xs text-slate-600 transition-colors hover:border-slate-500 hover:text-slate-900"
@@ -135,7 +153,7 @@ export default function WorkoutDay({
                   title="Edit day name"
                   aria-label="Edit day name"
                 >
-                  ✎
+                  <Pencil size={14} />
                 </button>
                 <h2 className="min-w-0 flex-1 break-words text-2xl font-semibold text-slate-800">
                   {day.name}
@@ -144,49 +162,79 @@ export default function WorkoutDay({
             )}
           </div>
 
-          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:justify-end">
+          <div className="flex w-full gap-2 sm:w-auto sm:justify-end">
             <button
               type="button"
-              className={day.isStarted ? 'w-full rounded-lg bg-amber-400 px-3 py-2 text-sm font-semibold text-slate-900 transition-colors hover:bg-amber-300 sm:w-auto' : 'w-full rounded-lg bg-emerald-500 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-400 sm:w-auto'}
+              className={day.isStarted ? 'min-h-11 flex-1 bg-[var(--accent)] px-3 py-2 text-sm font-bold text-white transition-colors hover:bg-[var(--accent-600)] sm:flex-none' : 'min-h-11 flex-1 bg-[var(--accent)] px-3 py-2 text-sm font-bold text-white transition-colors hover:bg-[var(--accent-600)] sm:flex-none'}
               onClick={(event) => {
                 event.stopPropagation()
                 onToggleDayStart(day.id, !day.isStarted)
               }}
               onPointerDown={(event) => event.stopPropagation()}
             >
-              {day.isStarted ? 'End Day' : 'Start Day'}
+              {day.isStarted ? 'End Session' : 'Start Session'}
             </button>
 
             <button
               type="button"
-              className="hidden w-full rounded-lg bg-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 transition-colors hover:bg-slate-300 sm:block sm:w-auto"
+              className="hidden min-h-11 rounded-lg bg-transparent px-3 py-2 text-sm font-bold text-[var(--ink)] transition-colors hover:bg-[var(--n-300)] sm:block"
               onClick={(event) => {
                 event.stopPropagation()
                 onToggleCollapse(day.id, !day.isCollapsed)
               }}
               title={day.isCollapsed ? 'Expand day' : 'Collapse day'}
             >
-              {day.isCollapsed ? 'Expand' : 'Collapse'}
+              {day.isCollapsed ? <ChevronDown size={17} /> : <ChevronUp size={17} />}
             </button>
 
             <button
               type="button"
-              className="hidden w-full rounded-lg bg-rose-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-rose-500 sm:block sm:w-auto"
+              className="hidden min-h-11 rounded-lg bg-transparent px-3 py-2 text-sm font-bold text-[var(--accent)] transition-colors hover:bg-[var(--accent-100)] sm:block"
               onClick={(event) => {
                 event.stopPropagation()
                 setShowDeleteModal(true)
               }}
               title="Remove day"
             >
-              Remove
+              <X size={17} />
             </button>
           </div>
-        </div>
+        </div>}
+
+        {homeMode && (
+          <div className="mb-4">
+            <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--n-600)]">{new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+            <h2 className="mt-1 text-3xl text-[var(--ink)]">{day.name}</h2>
+            <div className="mt-3 flex flex-wrap gap-5 border-y border-[var(--hairline)] py-2 text-xs font-bold uppercase tracking-wide text-[var(--n-600)]">
+              <span>{exerciseCount} exercises</span><span>{setCount} sets</span><span>Last done {lastCompletedLabel}</span>
+            </div>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation()
+                onToggleDayStart(day.id, !day.isStarted)
+              }}
+              onPointerDown={(event) => event.stopPropagation()}
+              className="mt-4 min-h-11 w-full bg-[var(--accent)] px-4 text-left text-sm font-bold text-white hover:bg-[var(--accent-600)]"
+            >
+              {day.isStarted ? 'END SESSION' : 'START SESSION'}
+            </button>
+          </div>
+        )}
+
+        {!sessionMode && homeMode && <div className="mb-2 flex items-center justify-between border-b-2 border-[var(--divider)] pb-2">
+          <span className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--ink)]">Exercises</span>
+          <button type="button" onClick={() => setIsEditingExercises(previous => !previous)} className="min-h-11 px-2 text-xs font-bold uppercase tracking-[0.12em] text-[var(--accent)]">{isEditingExercises ? 'Done' : 'Edit'}</button>
+        </div>}
 
         <div className={`overflow-hidden transition-all duration-300 ease-in-out ${day.isCollapsed ? 'max-h-0 opacity-0' : 'max-h-[3000px] opacity-100'}`}>
           <div ref={exerciseScrollRef} className="day-exercise-scroll flex min-h-0 flex-col gap-4 pr-1">
             {day.exercises.length === 0 ? (
-              <p className="py-5 text-center italic text-slate-400">No exercises yet.</p>
+              <div className="border-y border-[var(--hairline)] py-5 text-center">
+                <p className="font-bold text-[var(--ink)]">No exercises yet</p>
+                <p className="mt-1 text-sm text-[var(--n-600)]">Add your first movement to start this day.</p>
+                <button type="button" onClick={() => onAddExercise(day.id)} className="mt-4 min-h-11 bg-[var(--accent)] px-4 text-sm font-bold text-white">ADD YOUR FIRST EXERCISE</button>
+              </div>
             ) : (
               day.exercises.map(exercise => (
                 <Exercise
@@ -199,13 +247,16 @@ export default function WorkoutDay({
                   onCollapse={handleExerciseCollapse}
                   onRemove={() => onRemoveExercise(day.id, exercise.id)}
                   onUpdate={(updated) => onUpdateExercise(day.id, exercise.id, updated)}
+                  homeMode={homeMode}
+                  editMode={isEditingExercises}
+                  sessionMode={sessionMode}
                 />
               ))
             )}
           </div>
         </div>
 
-        {!day.isCollapsed && (
+        {!day.isCollapsed && !homeMode && !sessionMode && (
           <div className="mt-4">
             <button
               type="button"
@@ -213,7 +264,7 @@ export default function WorkoutDay({
               className="w-full rounded-xl border-2 border-dashed border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-400 hover:text-slate-900"
             >
               <span className="flex items-center justify-center gap-2">
-                <span className="text-lg leading-none">＋</span>
+                <Plus size={17} />
                 Add Exercise
               </span>
             </button>
@@ -223,27 +274,28 @@ export default function WorkoutDay({
 
       {dragX < 0 && (
         <div
-          className="pointer-events-none absolute inset-y-2 right-[-8px] z-0 flex items-center justify-center rounded-l-xl border border-rose-700/80 bg-rose-200/70 shadow-sm"
+          className="pointer-events-none absolute inset-y-2 right-[-8px] z-0 flex items-center justify-center border border-[var(--accent)] bg-[var(--accent-100)] shadow-sm"
           style={{ width: `${Math.min(Math.abs(dragX), 110)}px` }}
         >
-          <div className="flex h-8 w-8 items-start justify-center rounded-full border border-rose-700/80 bg-rose-100/80 pt-[2px] text-2xl font-bold leading-none text-rose-900">
-            −
+          <div className="flex h-8 w-8 items-start justify-center border border-[var(--accent)] bg-[var(--accent-100)] pt-[2px] text-2xl font-bold leading-none text-[var(--accent-700)]">
+            <Minus size={18} />
           </div>
         </div>
       )}
 
       {showDeleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75">
-          <div className="w-[min(90vw,420px)] rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-2xl">
-            <h3 className="mb-2 text-xl font-bold text-white">Remove Day?</h3>
-            <p className="mb-4 text-sm leading-6 text-slate-300">
-              Are you sure you want to remove <span className="font-semibold text-white">{day.name}</span>? This cannot be undone.
+        <div className="fixed inset-0 z-50 flex items-end bg-black/40 sm:items-center" onClick={() => setShowDeleteModal(false)}>
+          <div className="w-full border-t-2 border-[var(--divider)] bg-[var(--surface)] p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:max-w-md" onClick={event => event.stopPropagation()}>
+            <div className="mx-auto mb-4 h-1 w-12 bg-[var(--n-500)]" />
+            <h3 className="mb-2 text-xl">Remove Day?</h3>
+            <p className="mb-4 text-sm text-[var(--n-600)]">
+              Remove <span className="font-bold text-[var(--ink)]">{day.name}</span>? This cannot be undone.
             </p>
             <div className="flex justify-end gap-3">
-              <button type="button" className="rounded-lg bg-slate-700 px-3 py-2 text-sm font-semibold text-white" onClick={() => setShowDeleteModal(false)}>
+              <button type="button" className="min-h-11 bg-transparent px-3 py-2 text-sm font-bold text-[var(--ink)]" onClick={() => setShowDeleteModal(false)}>
                 Cancel
               </button>
-              <button type="button" className="rounded-lg bg-rose-600 px-3 py-2 text-sm font-semibold text-white" onClick={() => {
+              <button type="button" className="min-h-11 bg-[var(--accent)] px-3 py-2 text-sm font-bold text-white" onClick={() => {
                 onRemoveDay(day.id)
                 setShowDeleteModal(false)
               }}>
