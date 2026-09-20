@@ -62,17 +62,18 @@ main {
   padding: 20px;
 }
 
+.sheet-panel {
+  padding-bottom: calc(1.25rem + env(safe-area-inset-bottom) + var(--keyboard-height, 0px));
+  transition: padding-bottom 120ms ease-out;
+}
+
 @media (min-width: 640px) {
   main {
     max-width: 1200px;
   }
 }
 
-.bg-dark-blue {
-  background-color: var(--ink);
-}
-
-.bg-midnight-blue {
+.bg-ink {
   background-color: var(--ink);
 }
 
@@ -166,7 +167,7 @@ main {
   gap: 0.2rem;
   border: 0;
   background: transparent;
-  color: #64748b;
+  color: var(--n-600);
   min-height: 58px;
   font-size: 10px;
   font-weight: 800;

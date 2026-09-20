@@ -1,189 +1,39 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/authContext'
 import { deleteWorkoutLog, getWorkoutLogs, updateWorkoutLog } from '@/lib/firebaseQueries'
 import { formatUKDate } from '@/lib/chartUtils'
 import AppNav from '@/components/AppNav'
+import Sheet from '@/components/Sheet'
 
-const formatDuration = (durationMs) => {
-  const totalMinutes = Math.floor(Math.max(0, durationMs || 0) / 60000)
-  const hours = Math.floor(totalMinutes / 60)
-  const minutes = totalMinutes % 60
-  return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`
-}
+const formatDuration = ms => { const total = Math.floor(Math.max(0, ms || 0) / 60000); return total >= 60 ? `${Math.floor(total / 60)}h ${total % 60}m` : `${total}m` }
+const volume = log => (log.exercises || []).reduce((total, exercise) => total + (exercise.sets || []).reduce((sum, set) => sum + Number(set.weight || 0) * Number(set.reps || 0), 0), 0)
 
-function WorkoutLogCard({ log, onSave, onDelete }) {
-  const [isEditing, setIsEditing] = useState(false)
-  const [draftExercises, setDraftExercises] = useState(log.exercises || [])
-  const [isSaving, setIsSaving] = useState(false)
-
-  const handleSetChange = (exerciseIndex, setIndex, field, value) => {
-    setDraftExercises(previous => previous.map((exercise, currentExerciseIndex) => (
-      currentExerciseIndex !== exerciseIndex
-        ? exercise
-        : {
-            ...exercise,
-            sets: exercise.sets.map((set, currentSetIndex) => (
-              currentSetIndex !== setIndex ? set : { ...set, [field]: value }
-            )),
-          }
-    )))
+function LogCard({ log, onSave, onDelete }) {
+  const [expanded, setExpanded] = useState(false)
+  const [editing, setEditing] = useState(null)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const updateValue = async (exerciseIndex, setIndex, field, value) => {
+    const exercises = (log.exercises || []).map((exercise, index) => index !== exerciseIndex ? exercise : { ...exercise, sets: exercise.sets.map((set, current) => current !== setIndex ? set : { ...set, [field]: value }) })
+    await onSave(log.id, { exercises })
+    setEditing(null)
   }
-
-  const handleSave = async () => {
-    setIsSaving(true)
-    await onSave(log.id, { exercises: draftExercises })
-    setIsSaving(false)
-    setIsEditing(false)
-  }
-
-  return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-bold text-slate-900">{log.dayName}</h2>
-          <p className="mt-1 text-sm text-slate-500">{formatUKDate(log.startedAt)}</p>
-        </div>
-        <div className="text-right text-sm text-slate-500">
-          <div>{formatDuration(log.durationMs)}</div>
-          <div>{log.exercises?.length || 0} exercises</div>
-        </div>
-      </div>
-
-      <div className="mt-4 flex flex-col gap-3">
-        {draftExercises.length === 0 ? (
-          <p className="rounded-xl bg-slate-50 p-3 text-sm italic text-slate-500">No completed exercise data was recorded.</p>
-        ) : (
-          draftExercises.map((exercise, exerciseIndex) => (
-            <div key={`${log.id}-${exercise.id}`} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <h3 className="font-semibold text-slate-800">{exercise.name}</h3>
-              <div className="mt-2 flex flex-col gap-2">
-                {exercise.sets.map((set, setIndex) => (
-                  <div key={`${exercise.id}-${set.setNumber}`} className="grid grid-cols-[auto_1fr_1fr] items-center gap-2 text-sm">
-                    <span className="text-slate-500">Set {set.setNumber}</span>
-                    {isEditing ? (
-                      <>
-                        <input
-                          type="number"
-                          value={set.weight}
-                          onChange={(event) => handleSetChange(exerciseIndex, setIndex, 'weight', event.target.value)}
-                          className="min-w-0 rounded-lg border border-slate-300 bg-white px-2 py-2 text-slate-800"
-                          aria-label={`${exercise.name} set ${set.setNumber} weight`}
-                        />
-                        <input
-                          type="number"
-                          value={set.reps}
-                          onChange={(event) => handleSetChange(exerciseIndex, setIndex, 'reps', event.target.value)}
-                          className="min-w-0 rounded-lg border border-slate-300 bg-white px-2 py-2 text-slate-800"
-                          aria-label={`${exercise.name} set ${set.setNumber} reps`}
-                        />
-                      </>
-                    ) : (
-                      <>
-                        <span className="rounded-lg bg-white px-2 py-2 text-slate-700">{set.weight}kg</span>
-                        <span className="rounded-lg bg-white px-2 py-2 text-slate-700">{set.reps} reps</span>
-                      </>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-
-      <div className="mt-4 flex flex-wrap justify-end gap-2">
-        {isEditing ? (
-          <>
-            <button type="button" onClick={() => { setDraftExercises(log.exercises || []); setIsEditing(false) }} className="rounded-lg bg-slate-200 px-3 py-2 text-sm font-semibold text-slate-700">
-              Cancel
-            </button>
-            <button type="button" onClick={handleSave} disabled={isSaving} className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">
-              {isSaving ? 'Saving...' : 'Save Changes'}
-            </button>
-          </>
-        ) : (
-          <button type="button" onClick={() => setIsEditing(true)} className="rounded-lg bg-slate-800 px-3 py-2 text-sm font-semibold text-white">
-            Edit Data
-          </button>
-        )}
-        <button type="button" onClick={() => onDelete(log.id)} className="rounded-lg bg-rose-600 px-3 py-2 text-sm font-semibold text-white">
-          Delete
-        </button>
-      </div>
-    </article>
-  )
+  return <article className="border-b-2 border-[var(--divider)]"><button type="button" onClick={() => setExpanded(!expanded)} className="grid min-h-16 w-full grid-cols-[1fr_auto_auto] items-center gap-3 text-left"><span><strong className="block text-[var(--ink)]">{log.dayName}</strong><span className="text-sm text-[var(--n-600)]">{formatUKDate(log.startedAt)}</span></span><span className="text-right text-xs uppercase text-[var(--n-600)]">{formatDuration(log.durationMs)}<br />{Math.round(volume(log))}kg volume</span><span className="text-[var(--accent)]">{expanded ? '−' : '+'}</span></button>{expanded && <div className="border-t border-[var(--hairline)] py-3">{(log.exercises || []).map((exercise, exerciseIndex) => <div key={exercise.id} className="border-b border-[var(--hairline)] py-3"><h3 className="font-bold">{exercise.name}</h3>{exercise.sets.map((set, setIndex) => <div key={set.setNumber} className="grid grid-cols-[4rem_1fr_1fr] gap-2 py-1 text-sm"><span className="text-[var(--n-600)]">Set {set.setNumber}</span>{['weight', 'reps'].map(field => editing?.exerciseIndex === exerciseIndex && editing?.setIndex === setIndex && editing.field === field ? <input key={field} autoFocus type="text" inputMode="decimal" value={set[field]} onChange={event => updateValue(exerciseIndex, setIndex, field, event.target.value)} onBlur={() => setEditing(null)} className="min-h-11 border-2 border-[var(--accent)] bg-transparent px-2" /> : <button key={field} type="button" onClick={() => setEditing({ exerciseIndex, setIndex, field })} className="min-h-11 border-b border-[var(--hairline)] text-left num">{set[field]}{field === 'weight' ? 'kg' : ' reps'}</button>)}</div>)}</div>)}<button type="button" onClick={() => setDeleteOpen(true)} className="mt-3 min-h-11 text-sm font-bold text-[var(--accent)]">DELETE LOG</button><Sheet open={deleteOpen} onClose={() => setDeleteOpen(false)} title="Delete workout log?"><p className="text-sm text-[var(--n-600)]">This removes this session from your raw data history.</p><button type="button" onClick={() => { onDelete(log.id); setDeleteOpen(false) }} className="mt-5 min-h-11 w-full bg-[var(--accent)] font-bold text-white">DELETE</button></Sheet></div>}</article>
 }
 
 export default function DataPage() {
-  const { user, loading: authLoading, logout } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const router = useRouter()
   const [logs, setLogs] = useState([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
-
-  useEffect(() => {
-    if (authLoading) return
-    if (!user) {
-      router.push('/login')
-      return
-    }
-
-    getWorkoutLogs(user.uid)
-      .then(setLogs)
-      .catch(error => {
-        console.error('Error loading workout logs:', error)
-        setLoadError(error?.code || error?.message || 'Unable to load workout logs from Firebase.')
-      })
-      .finally(() => setLoading(false))
-  }, [user, authLoading, router])
-
-  const handleSave = async (logId, updates) => {
-    await updateWorkoutLog(user.uid, logId, updates)
-    setLogs(previous => previous.map(log => log.id === logId ? { ...log, ...updates } : log))
-  }
-
-  const handleDelete = async (logId) => {
-    if (!window.confirm('Delete this workout data?')) return
-    await deleteWorkoutLog(user.uid, logId)
-    setLogs(previous => previous.filter(log => log.id !== logId))
-  }
-
-  const handleLogout = async () => {
-    await logout()
-    router.push('/login')
-  }
-
-  if (authLoading || loading) {
-    return <div className="min-h-screen bg-page px-5 py-10 text-center font-dark">Loading...</div>
-  }
-
+  useEffect(() => { if (authLoading) return; if (!user) { router.push('/login'); return } getWorkoutLogs(user.uid).then(setLogs).catch(error => setLoadError(error?.code || error?.message || 'Unable to load workout logs.')).finally(() => setLoading(false)) }, [user, authLoading, router])
+  const groupedLogs = useMemo(() => logs.reduce((groups, log) => { const key = new Date(log.startedAt).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }).toUpperCase(); (groups[key] ||= []).push(log); return groups }, {}), [logs])
+  const save = async (id, updates) => { await updateWorkoutLog(user.uid, id, updates); setLogs(previous => previous.map(log => log.id === id ? { ...log, ...updates } : log)) }
+  const remove = async id => { await deleteWorkoutLog(user.uid, id); setLogs(previous => previous.filter(log => log.id !== id)) }
+  if (authLoading || loading) return <div className="min-h-screen bg-page px-5 py-10 text-center font-dark">Loading data...</div>
   if (!user) return null
-
-  if (loadError) {
-    return <div className="min-h-screen bg-page px-5 py-10 text-center font-dark">Firebase error: {loadError}</div>
-  }
-
-  return (
-    <>
-      <AppNav />
-
-      <main className="py-5">
-        <h1 className="mb-6 text-3xl font-bold text-slate-800">Workout Data</h1>
-        <div className="mx-auto flex max-w-3xl flex-col gap-4">
-          {logs.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center text-slate-500">
-              Completed workout data will appear here.
-            </div>
-          ) : (
-            logs.map(log => (
-              <WorkoutLogCard key={log.id} log={log} onSave={handleSave} onDelete={handleDelete} />
-            ))
-          )}
-        </div>
-      </main>
-    </>
-  )
+  return <><AppNav /><main><h1 className="mb-6 text-3xl text-[var(--ink)]">Workout Data</h1>{loadError && <p className="text-[var(--accent-700)]">{loadError}</p>}{logs.length === 0 ? <div className="border-y border-[var(--hairline)] py-6"><p className="font-bold">No workout logs yet</p><p className="mt-1 text-sm text-[var(--n-600)]">Completed sessions will appear here.</p></div> : Object.entries(groupedLogs).map(([month, monthLogs]) => <section key={month} className="mb-6"><h2 className="sticky top-0 border-b-2 border-[var(--divider)] bg-[var(--bg)] py-2 text-xs font-bold tracking-[0.12em]">{month}</h2>{monthLogs.map(log => <LogCard key={log.id} log={log} onSave={save} onDelete={remove} />)}</section>)}</main></>
 }

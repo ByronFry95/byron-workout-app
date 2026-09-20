@@ -141,6 +141,9 @@ export default function Exercise({ exercise, dayId, isExpanded, isOtherExerciseE
 
   const handleSaveSet = (setNumber) => {
     setCompletedSetNumbers(previous => new Set(previous).add(setNumber))
+    const updatedSets = sets.map(set => set.setNumber === setNumber ? { ...set, loggedAt: set.loggedAt || new Date().toISOString() } : set)
+    setSets(updatedSets)
+    onUpdate({ ...exercise, sets: updatedSets, isStarted, isCollapsed, markForIncrease })
     navigator.vibrate?.(15)
     setActiveSetEditor(null)
   }
@@ -331,7 +334,7 @@ export default function Exercise({ exercise, dayId, isExpanded, isOtherExerciseE
               <div className="mb-4 flex items-center justify-between"><h3 className="text-xl">Set {activeSetEditor.setNumber} {fieldLabel}</h3><button type="button" onClick={() => setActiveSetEditor(null)} className="flex h-11 w-11 items-center justify-center border-0 bg-transparent"><X size={20} /></button></div>
               <div className="flex items-center justify-center gap-5"><button type="button" onClick={() => adjustSetValue(activeSetEditor.setNumber, activeSetEditor.field, -step)} className="flex h-11 w-11 items-center justify-center border-2 border-[var(--divider)]"><Minus size={18} /></button><span className="num text-4xl">{activeSet?.[activeSetEditor.field] || 0}</span><button type="button" onClick={() => adjustSetValue(activeSetEditor.setNumber, activeSetEditor.field, step)} className="flex h-11 w-11 items-center justify-center border-2 border-[var(--divider)]"><Plus size={18} /></button></div>
               <input type="text" inputMode="decimal" pattern="[0-9]*[.,]?[0-9]*" value={activeSet?.[activeSetEditor.field] || ''} onChange={event => handleSetChange(activeSetEditor.setNumber, activeSetEditor.field, event.target.value)} className="mt-4 min-h-11 w-full border-2 border-[var(--divider)] bg-transparent px-3 num text-2xl" />
-              <button type="button" onClick={() => setActiveSetEditor(null)} className="mt-4 min-h-11 w-full bg-[var(--accent)] font-bold text-white">LOG SET</button>
+              <button type="button" onClick={() => handleSaveSet(activeSetEditor.setNumber)} className="mt-4 min-h-11 w-full bg-[var(--accent)] font-bold text-white">LOG SET</button>
             </div>
           </div>
         )

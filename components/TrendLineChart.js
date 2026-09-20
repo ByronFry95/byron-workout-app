@@ -8,7 +8,7 @@ export default function TrendLineChart({ series, height = 170, emptyMessage = 'N
   if (visibleSeries.length === 0) {
     return (
       <div
-        className="flex items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 text-sm text-slate-400"
+        className="flex items-center justify-center border-2 border-dashed border-[var(--hairline)] bg-[var(--surface)] text-sm text-[var(--n-600)]"
         style={{ height }}
       >
         {emptyMessage}
@@ -47,7 +47,7 @@ export default function TrendLineChart({ series, height = 170, emptyMessage = 'N
   })
 
   return (
-    <div className="w-full overflow-hidden rounded-xl border border-slate-200 bg-white p-3">
+    <div className="w-full overflow-hidden border-2 border-[var(--divider)] bg-[var(--surface)] p-3">
       <svg viewBox={`0 0 ${width} ${height}`} className="w-full" style={{ height }}>
         {[0.25, 0.5, 0.75].map(fraction => (
           <line
@@ -56,7 +56,7 @@ export default function TrendLineChart({ series, height = 170, emptyMessage = 'N
             x2={width - padding.right}
             y1={padding.top + plotHeight * fraction}
             y2={padding.top + plotHeight * fraction}
-            stroke="#e2e8f0"
+            stroke="var(--hairline)"
             strokeWidth="1"
           />
         ))}
@@ -80,26 +80,26 @@ export default function TrendLineChart({ series, height = 170, emptyMessage = 'N
           ))
         ))}
 
-        <text x={padding.left} y={height - 4} fontSize="10" fill="#94a3b8">
+        <text x={padding.left} y={height - 4} fontSize="10" fill="var(--n-600)">
           {new Date(xMin).toLocaleDateString('en-GB')}
         </text>
         {!normalize && [sharedMax, (sharedMax + sharedMin) / 2, sharedMin].map((value, index) => (
-          <text key={value} x={width - padding.right} y={padding.top + (plotHeight * index) + 4} fontSize="10" fill="#94a3b8" textAnchor="end">
+          <text key={value} x={width - padding.right} y={padding.top + (plotHeight * index) + 4} fontSize="10" fill="var(--n-600)" textAnchor="end">
             {Number(value).toFixed(0)}
           </text>
         ))}
-        <text x={width - padding.right} y={height - 4} fontSize="10" fill="#94a3b8" textAnchor="end">
+        <text x={width - padding.right} y={height - 4} fontSize="10" fill="var(--n-600)" textAnchor="end">
           {new Date(xMax).toLocaleDateString('en-GB')}
         </text>
       </svg>
 
-      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--n-600)]">
         {preparedSeries.map(s => {
           const latest = s.points[s.points.length - 1]
           return (
             <span key={s.id} className="flex items-center gap-1.5">
-              <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: s.color }} />
-              {s.label}: <strong className="text-slate-700">{s.formatValue ? s.formatValue(latest.y) : latest.y}</strong>
+              <span className="h-0.5 w-4 shrink-0" style={{ backgroundColor: s.color, borderTop: s.dash ? `2px dashed ${s.color}` : undefined }} />
+              {s.label}: <strong className="text-[var(--ink)]">{s.formatValue ? s.formatValue(latest.y) : latest.y}</strong>
             </span>
           )
         })}

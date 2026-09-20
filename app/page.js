@@ -10,7 +10,7 @@ import AppNav from '@/components/AppNav'
 import { Plus } from 'lucide-react'
 
 export default function WorkoutsPage() {
-  const { user, loading: authLoading, logout } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const { session: workoutSession, startSession, endSession, registerEndHandler } = useWorkoutSession()
   const router = useRouter()
   const [days, setDays] = useState([])
@@ -207,15 +207,6 @@ export default function WorkoutsPage() {
 
   useEffect(() => registerEndHandler(handleEndDay), [registerEndHandler, workoutSession, days])
 
-  const handleLogout = async () => {
-    try {
-      await logout()
-      router.push('/login')
-    } catch (error) {
-      console.error('Error logging out:', error)
-    }
-  }
-
   const startedDayId = days.find(day => day.isStarted)?.id
   const visibleDays = startedDayId ? days.filter(day => day.id === startedDayId) : days
 
@@ -237,7 +228,7 @@ export default function WorkoutsPage() {
     <>
       <AppNav />
 
-      <main className="py-5">
+      <main>
         <h1 className="mb-8 text-3xl font-bold text-slate-800">Workout Tracker</h1>
         <div className="flex flex-col gap-5">
           {visibleDays.map(day => (

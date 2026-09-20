@@ -61,7 +61,7 @@ export default function WorkoutTimer({ session, onStartDay, onEndDay, sticky = f
   }, [isRunning])
 
   return (
-    <div className={`bg-dark-blue p-4 text-white ${sticky ? 'sticky top-0 z-30 mb-0 border-b-2 border-[var(--accent)]' : `mb-6 ${isRunning ? 'fixed bottom-[4.75rem] left-3 right-3 z-30 mb-0 sm:static sm:mb-6' : ''}`}`}>
+    <div className={`bg-ink p-4 text-white ${sticky ? 'sticky top-0 z-30 mb-0 border-b-2 border-[var(--accent)]' : `mb-6 ${isRunning ? 'fixed bottom-[4.75rem] left-3 right-3 z-30 mb-0 sm:static sm:mb-6' : ''}`}`}>
       <div className="mb-2 flex items-center justify-between">
         <span className="text-[0.7rem] uppercase tracking-[0.08em] text-slate-300">Workout Timer</span>
         <span className={`px-2.5 py-1 text-[0.72rem] font-bold ${isRunning ? 'bg-[var(--accent)] text-white' : 'bg-white/10 text-slate-200'}`}>
