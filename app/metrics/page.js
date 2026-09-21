@@ -57,7 +57,7 @@ export default function MetricsPage() {
 
   const latest = history[0]
   const previous = history[1]
-  const delta = field => latest && previous && latest[field] && previous[field] ? Number(latest[field]) - Number(previous[field]) : null
+  const delta = field => latest && previous && latest[field] && previous[field] ? Math.round((Number(latest[field]) - Number(previous[field])) * 100) / 100 : null
 
   if (authLoading || loading) return <div className="min-h-screen bg-page px-5 py-10 text-center font-dark">Loading metrics...</div>
   if (!user) return null

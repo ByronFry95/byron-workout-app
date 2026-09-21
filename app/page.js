@@ -1,7 +1,10 @@
 'use client'
 
+import { useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { BarChart3, Check, Dumbbell, List, UserRound } from 'lucide-react'
+import { useAuth } from '@/lib/authContext'
 import './landing.css'
 
 const pageCards = [
@@ -46,6 +49,15 @@ function PhonePreview() {
 }
 
 export default function LandingPage() {
+  const { user, loading } = useAuth()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (!loading && user) router.push('/workouts')
+  }, [user, loading, router])
+
+  if (loading || user) return null
+
   return (
     <div className="landing-shell">
       <div className="landing-container">

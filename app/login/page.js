@@ -11,12 +11,16 @@ export default function LoginPage() {
   const [isLogin, setIsLogin] = useState(true)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const { login, signup, resetPassword } = useAuth()
+  const { user, loading: authLoading, login, signup, resetPassword } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get('mode') === 'register') setIsLogin(false)
   }, [])
+
+  useEffect(() => {
+    if (!authLoading && user) router.push('/workouts')
+  }, [user, authLoading, router])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -57,6 +61,8 @@ export default function LoginPage() {
       setError(err.code === 'auth/user-not-found' ? 'No account was found for that email.' : 'Unable to send the reset email.')
     }
   }
+
+  if (authLoading || user) return null
 
   return (
     <div className="login-container">
