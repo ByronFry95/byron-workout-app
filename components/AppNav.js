@@ -4,10 +4,11 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/authContext'
-import { BarChart3, Dumbbell, List, LogOut, UserRound, X } from 'lucide-react'
+import { BarChart3, BookOpen, Dumbbell, List, LogOut, UserRound, X } from 'lucide-react'
 
 const navigation = [
   { href: '/workouts', label: 'Workouts', shortLabel: 'Workouts', icon: Dumbbell },
+  { href: '/library', label: 'Library', shortLabel: 'Library', icon: BookOpen },
   { href: '/metrics', label: 'Body Metrics', shortLabel: 'Metrics', icon: UserRound },
   { href: '/data', label: 'Data', shortLabel: 'Data', icon: List },
   { href: '/stats', label: 'Stats', shortLabel: 'Stats', icon: BarChart3 },

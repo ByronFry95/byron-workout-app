@@ -7,6 +7,7 @@ import { getWorkoutDays, getWorkoutLogs, saveWorkoutDays, saveWorkoutLog } from 
 import { useWorkoutSession } from '@/lib/workoutSessionContext'
 import WorkoutDay from '@/components/WorkoutDay'
 import AppNav from '@/components/AppNav'
+import AddExerciseSheet from '@/components/library/AddExerciseSheet'
 import { Plus } from 'lucide-react'
 
 export default function WorkoutsPage() {
@@ -17,6 +18,7 @@ export default function WorkoutsPage() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [workoutLogs, setWorkoutLogs] = useState([])
+  const [addExerciseDayId, setAddExerciseDayId] = useState(null)
 
   useEffect(() => {
     if (authLoading) return
@@ -68,7 +70,8 @@ export default function WorkoutsPage() {
     if (removedDay?.isStarted) endSession().catch(error => console.error('Failed to end removed day session:', error))
   }
 
-  const handleAddExercise = (dayId) => setDays(days.map(day => day.id === dayId ? { ...day, exercises: [...day.exercises, { id: Date.now(), name: 'New Exercise', isStarted: false, isCompleted: false, isCollapsed: false, markForIncrease: false, sets: [1, 2, 3].map(setNumber => ({ setNumber, previousWeight: 0, previousReps: 0, currentWeight: '', currentReps: '' })) }] } : day))
+  const handleAddExercise = (dayId) => setAddExerciseDayId(dayId)
+  const handleConfirmAddExercise = (entry) => setDays(previous => previous.map(day => day.id === addExerciseDayId ? { ...day, exercises: [...day.exercises, entry] } : day))
   const handleRemoveExercise = (dayId, exerciseId) => setDays(days.map(day => day.id === dayId ? { ...day, exercises: day.exercises.filter(ex => ex.id !== exerciseId) } : day))
   const handleUpdateExercise = (dayId, exerciseId, updatedExercise) => setDays(days.map(day => day.id === dayId ? { ...day, exercises: day.exercises.map(ex => ex.id === exerciseId ? updatedExercise : ex) } : day))
 
@@ -94,5 +97,5 @@ export default function WorkoutsPage() {
   if (!user) return null
   if (loadError) return <div className="min-h-screen bg-page px-5 py-10 text-center font-dark">Firebase error: {loadError}</div>
 
-  return <><AppNav /><main><h1 className="mb-8 text-3xl text-[var(--ink)]">Workout Tracker</h1><div className="flex flex-col gap-5">{visibleDays.map(day => <WorkoutDay key={day.id} day={day} onDayNameChange={handleDayNameChange} onToggleCollapse={handleToggleDayCollapse} onToggleDayStart={handleToggleDayStart} onRemoveDay={handleRemoveDay} onAddExercise={handleAddExercise} onRemoveExercise={handleRemoveExercise} onUpdateExercise={handleUpdateExercise} homeMode lastCompletedAt={getLastCompletedDate(day.id)} />)}</div><button type="button" onClick={handleAddDay} className="mt-6 w-full border-2 border-dashed border-[var(--divider)] bg-transparent p-3 text-left font-bold"><span className="flex items-center gap-2"><Plus size={17} />Add Day</span></button></main></>
+  return <><AppNav /><main><h1 className="mb-8 text-3xl text-[var(--ink)]">Workout Tracker</h1><div className="flex flex-col gap-5">{visibleDays.map(day => <WorkoutDay key={day.id} day={day} onDayNameChange={handleDayNameChange} onToggleCollapse={handleToggleDayCollapse} onToggleDayStart={handleToggleDayStart} onRemoveDay={handleRemoveDay} onAddExercise={handleAddExercise} onRemoveExercise={handleRemoveExercise} onUpdateExercise={handleUpdateExercise} homeMode lastCompletedAt={getLastCompletedDate(day.id)} />)}</div><button type="button" onClick={handleAddDay} className="mt-6 w-full border-2 border-dashed border-[var(--divider)] bg-transparent p-3 text-left font-bold"><span className="flex items-center gap-2"><Plus size={17} />Add Day</span></button></main><AddExerciseSheet open={Boolean(addExerciseDayId)} onClose={() => setAddExerciseDayId(null)} dayName={days.find(day => day.id === addExerciseDayId)?.name} onAdd={handleConfirmAddExercise} /></>
 }

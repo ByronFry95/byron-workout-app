@@ -256,7 +256,7 @@ export default function WorkoutDay({
           </div>
         </div>
 
-        {!day.isCollapsed && !homeMode && !sessionMode && (
+        {!day.isCollapsed && day.exercises.length > 0 && (
           <div className="mt-4">
             <button
               type="button"

@@ -8,6 +8,7 @@ import { getWorkoutDays, saveWorkoutDays, saveWorkoutLog } from '@/lib/firebaseQ
 import AppNav from '@/components/AppNav'
 import WorkoutDay from '@/components/WorkoutDay'
 import WorkoutTimer from '@/components/WorkoutTimer'
+import AddExerciseSheet from '@/components/library/AddExerciseSheet'
 
 export default function SessionPage() {
   const { user, loading: authLoading } = useAuth()
@@ -15,6 +16,7 @@ export default function SessionPage() {
   const router = useRouter()
   const [days, setDays] = useState([])
   const [loading, setLoading] = useState(true)
+  const [addExerciseOpen, setAddExerciseOpen] = useState(false)
 
   useEffect(() => {
     if (authLoading) return
@@ -34,6 +36,11 @@ export default function SessionPage() {
   }, [days, loading, user])
 
   const activeDay = days.find(day => day.isStarted || day.id === session?.dayId)
+
+  const handleConfirmAddExercise = (entry) => {
+    if (!activeDay) return
+    setDays(previous => previous.map(day => day.id === activeDay.id ? { ...day, exercises: [...day.exercises, entry] } : day))
+  }
 
   const updateExercise = (dayId, exerciseId, updatedExercise) => {
     setDays(previous => previous.map(day => day.id === dayId
@@ -98,12 +105,13 @@ export default function SessionPage() {
           onToggleCollapse={() => {}}
           onToggleDayStart={(_, started) => { if (!started) handleEndSession() }}
           onRemoveDay={() => {}}
-          onAddExercise={() => {}}
+          onAddExercise={() => setAddExerciseOpen(true)}
           onRemoveExercise={() => {}}
           onUpdateExercise={(dayId, exerciseId, updated) => updateExercise(dayId, exerciseId, updated)}
           sessionMode
         />
       </main>
+      <AddExerciseSheet open={addExerciseOpen} onClose={() => setAddExerciseOpen(false)} dayName={activeDay.name} onAdd={handleConfirmAddExercise} />
     </>
   )
 }
