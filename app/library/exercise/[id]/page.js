@@ -74,19 +74,25 @@ export default function ExerciseDetailPage() {
           <span className="border-2 border-[var(--hairline)] px-2 py-1 text-xs font-bold">{exercise.movement}</span>
           <span className="border-2 border-[var(--hairline)] px-2 py-1 text-xs font-bold">{exercise.equipment}</span>
           <span className="border-2 border-[var(--hairline)] px-2 py-1 text-xs font-bold text-[var(--n-600)]">{exercise.category}</span>
+          {exercise.level && <span className="border-2 border-[var(--hairline)] px-2 py-1 text-xs font-bold text-[var(--n-600)]">{exercise.level}</span>}
+          {exercise.rating != null && <span className="border-2 border-[var(--hairline)] px-2 py-1 text-xs font-bold text-[var(--n-600)]">★ {exercise.rating}</span>}
           {addedToDay && <span className="border-2 border-[var(--accent)] bg-[var(--accent-100)] px-2 py-1 text-xs font-bold text-[var(--accent-700)]">In {addedToDay}</span>}
         </div>
-        <p className="mb-6 text-sm leading-relaxed text-[var(--ink)]">{exercise.description}</p>
+        {exercise.description && <p className="mb-6 text-sm leading-relaxed text-[var(--ink)]">{exercise.description}</p>}
 
-        <p className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-[var(--n-600)]">How to</p>
-        <div className="mb-6 border-t-2 border-[var(--divider)]">
-          {exercise.steps.map((step, index) => (
-            <div key={step} className="grid grid-cols-[22px_1fr] gap-2 border-b border-[var(--hairline)] py-2">
-              <span className="num text-sm text-[var(--accent)]">{String(index + 1).padStart(2, '0')}</span>
-              <span className="text-sm leading-relaxed">{step}</span>
+        {exercise.steps?.length > 0 && (
+          <>
+            <p className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-[var(--n-600)]">How to</p>
+            <div className="mb-6 border-t-2 border-[var(--divider)]">
+              {exercise.steps.map((step, index) => (
+                <div key={step} className="grid grid-cols-[22px_1fr] gap-2 border-b border-[var(--hairline)] py-2">
+                  <span className="num text-sm text-[var(--accent)]">{String(index + 1).padStart(2, '0')}</span>
+                  <span className="text-sm leading-relaxed">{step}</span>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </>
+        )}
 
         <p className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-[var(--n-600)]">Your history</p>
         <div className="grid grid-cols-3 gap-px border-2 border-[var(--divider)] bg-[var(--divider)]">
