@@ -34,6 +34,19 @@ body {
   font-family: 'Archivo', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button, a {
+  touch-action: manipulation;
+}
+
+@media (max-width: 639px) {
+  /* iOS Safari zooms the page on focus if an input's font-size is below 16px */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
 }
 
 code {

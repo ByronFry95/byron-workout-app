@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Check, ChevronDown, ChevronUp, ChevronUp as WeightUp, Minus, Pencil, Play, Plus, Square, X } from 'lucide-react'
+import { Check, ChevronDown, ChevronUp, ChevronUp as WeightUp, Copy, Minus, Pencil, Play, Plus, Square, X } from 'lucide-react'
 
 export default function Exercise({ exercise, dayId, isExpanded, isOtherExerciseExpanded, homeMode = false, editMode = false, sessionMode = false, onExpand, onCollapse, onRemove, onUpdate }) {
   const [isEditingName, setIsEditingName] = useState(false)
@@ -184,6 +184,15 @@ export default function Exercise({ exercise, dayId, isExpanded, isOtherExerciseE
     onUpdate({ ...exercise, sets: updatedSets, isStarted, isCollapsed, markForIncrease })
   }
 
+  const handleCopyPrevious = (setNumber) => {
+    const updatedSets = sets.map(set => set.setNumber === setNumber
+      ? { ...set, currentWeight: String(set.previousWeight || ''), currentReps: String(set.previousReps || '') }
+      : set)
+    setSets(updatedSets)
+    onUpdate({ ...exercise, sets: updatedSets, isStarted, isCollapsed, markForIncrease })
+    navigator.vibrate?.(10)
+  }
+
   return (
     <div data-exercise-card className={`exercise-card relative w-full min-w-0 overflow-hidden border-b-2 p-3 text-[var(--ink)] transition-all duration-300 sm:p-4 ${isStarted ? 'border-[var(--accent)] bg-[var(--accent-100)]' : 'border-[var(--hairline)] bg-[var(--bg)]'}`} onClick={handleCardTap}>
       <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -198,9 +207,9 @@ export default function Exercise({ exercise, dayId, isExpanded, isOtherExerciseE
             className="w-full max-w-[280px] border-2 border-[var(--accent)] bg-[var(--surface)] px-3 py-2 text-base font-medium text-[var(--ink)] outline-none"
           />
         ) : (
-          <div className="flex min-w-0 w-full flex-wrap items-center gap-2 text-[var(--ink)]">
+          <div className="min-w-0 w-full text-[var(--ink)]">
             <h3 className="min-w-0 max-w-full break-words text-lg font-semibold text-[var(--ink)]">{exercise.name}</h3>
-            {isStarted && <span className="rounded-full bg-[var(--accent-100)] px-2 py-1 text-[0.65rem] font-bold text-[var(--accent)]">In Progress</span>}
+            {isStarted && <span className="mt-1 inline-block rounded-full bg-[var(--accent-100)] px-2 py-1 text-[0.65rem] font-bold text-[var(--accent)]">In Progress</span>}
           </div>
         )}
 
@@ -303,7 +312,16 @@ export default function Exercise({ exercise, dayId, isExpanded, isOtherExerciseE
             return (
               <div key={set.setNumber} className={`grid min-h-12 grid-cols-[2.5rem_1fr_1fr_1fr_2.75rem] items-center gap-2 border-b border-[var(--hairline)] px-1 py-1 ${isSetComplete ? 'opacity-45' : ''}`}>
                 <span className="num text-sm text-[var(--n-700)]">{set.setNumber}</span>
-                <span className="truncate text-xs text-[var(--n-600)]">{set.previousWeight || 0}kg / {set.previousReps || 0}</span>
+                <button
+                  type="button"
+                  onClick={() => handleCopyPrevious(set.setNumber)}
+                  disabled={!set.previousWeight && !set.previousReps}
+                  className="flex min-h-11 min-w-0 items-center gap-1 truncate border-0 bg-transparent text-left text-xs text-[var(--n-600)] underline decoration-dotted underline-offset-2 disabled:no-underline disabled:opacity-60"
+                  title="Copy into this set"
+                >
+                  <Copy size={11} className="shrink-0" aria-hidden="true" />
+                  <span className="truncate">{set.previousWeight || 0}kg / {set.previousReps || 0}</span>
+                </button>
                 <button type="button" onClick={() => setActiveSetEditor({ setNumber: set.setNumber, field: 'currentWeight' })} className="min-h-11 border-0 bg-transparent text-left num text-[var(--ink)]">{set.currentWeight || 'kg'}</button>
                 <button type="button" onClick={() => setActiveSetEditor({ setNumber: set.setNumber, field: 'currentReps' })} className="min-h-11 border-0 bg-transparent text-left num text-[var(--ink)]">{set.currentReps || 'reps'}</button>
                 <button type="button" onClick={() => handleSaveSet(set.setNumber)} className="flex h-11 w-11 items-center justify-center border-2 border-[var(--accent)] bg-[var(--accent-100)] text-[var(--accent)]" aria-label={`Log set ${set.setNumber}`}><Check size={18} /></button>
