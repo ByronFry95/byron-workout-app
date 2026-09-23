@@ -16,6 +16,7 @@ import AddToSessionSheet from '@/components/library/AddToSessionSheet'
 import AddedToast from '@/components/library/AddedToast'
 
 const emptyFilters = { bodyPart: [], movement: [], equipment: [] }
+const MAX_RENDERED_EXERCISES = 91
 
 export default function LibraryPage() {
   const { user, loading: authLoading } = useAuth()
@@ -43,6 +44,7 @@ export default function LibraryPage() {
   const activeFilterCount = filters.bodyPart.length + filters.movement.length + filters.equipment.length
 
   const filteredExercises = useMemo(() => filterExercises(exercises, { search, filters }), [search, filters])
+  const renderedExercises = filteredExercises.slice(0, MAX_RENDERED_EXERCISES)
 
   const filteredRoutines = useMemo(() => {
     const term = search.trim().toLowerCase()
@@ -127,7 +129,7 @@ export default function LibraryPage() {
             <div className="border-y border-[var(--hairline)] py-6"><p className="font-bold">No exercises match</p><p className="mt-1 text-sm text-[var(--n-600)]">Try clearing your filters or search.</p></div>
           ) : (
             <div className="border-t-2 border-[var(--divider)]">
-              {filteredExercises.map(exercise => <ExerciseRow key={exercise.id} exercise={exercise} addedDayName={findDayForLibraryId(exercise.id)?.name} onAdd={handleAddExerciseClick} />)}
+              {renderedExercises.map(exercise => <ExerciseRow key={exercise.id} exercise={exercise} addedDayName={findDayForLibraryId(exercise.id)?.name} onAdd={handleAddExerciseClick} />)}
             </div>
           )
         ) : (

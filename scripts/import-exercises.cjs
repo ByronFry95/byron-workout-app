@@ -1,12 +1,12 @@
-// One-off importer: reads megaGymDataset.csv, filters to the top-rated exercises,
+// One-off importer: reads megaGymDataset.csv and imports the rated exercises,
 // dedupes near-identical rows/variants, and emits a JS array to merge into lib/exerciseLibrary.js.
-// Re-run with `node scripts/import-exercises.cjs [count]` if we want a bigger cut later.
+// Re-run with `node scripts/import-exercises.cjs [count]` to limit the imported rows.
 const fs = require('fs');
 const path = require('path');
 
 const CSV_PATH = path.join(__dirname, '..', 'megaGymDataset.csv');
 const LIBRARY_PATH = path.join(__dirname, '..', 'lib', 'exerciseLibrary.js');
-const TOP_N = Number(process.argv[2]) || 40;
+const TOP_N = Number(process.argv[2]) || Number.MAX_SAFE_INTEGER;
 
 // --- minimal RFC4180 CSV parser (handles quoted fields, embedded commas/quotes/newlines) ---
 function parseCsv(text) {
@@ -148,14 +148,14 @@ const existingNames = new Set(existingRawNames.map(normalizeBaseName));
 const existingCoreKeys = existingRawNames.map(coreMovementKey);
 const existingIds = new Set([...existingSource.matchAll(/id: '([^']+)'/g)].map(m => m[1]));
 
-rated.sort((a, b) => b.rating - a.rating);
+const candidates = records.slice().sort((a, b) => b.rating - a.rating);
 
 const seenDesc = new Set();
 const seenNameKey = new Set();
 const seenCoreKey = new Set();
 const kept = [];
 
-for (const record of rated) {
+for (const record of candidates) {
   const baseName = normalizeBaseName(record.name);
   const coreKey = coreMovementKey(record.name);
   if (matchesExisting(baseName, coreKey, existingNames, existingCoreKeys)) continue; // already in our hand-curated set
@@ -227,7 +227,7 @@ output.forEach(item => console.log(`${item.rating.toFixed(1)}  ${item.name}  [${
 // --- write the entries straight into lib/exerciseLibrary.js, right before getExerciseById ---
 if (process.argv.includes('--apply')) {
   const esc = s => s.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-  const marker = '\n// --- Imported from megaGymDataset.csv (top-rated cut, see scripts/import-exercises.cjs) ---\n';
+  const marker = '\n// --- Imported from megaGymDataset.csv (see scripts/import-exercises.cjs) ---\n';
   const entryLines = output.map(e =>
     `  { id: '${e.id}', name: '${esc(e.name)}', bodyPart: '${e.bodyPart}', movement: '${e.movement}', equipment: '${e.equipment}', category: '${e.category}', level: '${e.level}', rating: ${e.rating}, description: '${esc(e.description)}' },`
   );
