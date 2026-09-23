@@ -9,6 +9,7 @@ import AppNav from '@/components/AppNav'
 import WorkoutDay from '@/components/WorkoutDay'
 import WorkoutTimer from '@/components/WorkoutTimer'
 import AddExerciseSheet from '@/components/library/AddExerciseSheet'
+import { Pencil } from 'lucide-react'
 
 export default function SessionPage() {
   const { user, loading: authLoading } = useAuth()
@@ -17,6 +18,8 @@ export default function SessionPage() {
   const [days, setDays] = useState([])
   const [loading, setLoading] = useState(true)
   const [addExerciseOpen, setAddExerciseOpen] = useState(false)
+  const [isEditingName, setIsEditingName] = useState(false)
+  const [editedName, setEditedName] = useState('')
 
   useEffect(() => {
     if (authLoading) return
@@ -37,6 +40,23 @@ export default function SessionPage() {
 
   const activeDay = days.find(day => day.isStarted || day.id === session?.dayId)
 
+  const handleDayNameChange = (id, newName) => {
+    setDays(previous => previous.map(day => day.id === id ? { ...day, name: newName } : day))
+  }
+
+  const handleSaveName = () => {
+    if (activeDay) handleDayNameChange(activeDay.id, editedName)
+    setIsEditingName(false)
+  }
+
+  const handleNameKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      handleSaveName()
+    } else if (e.key === 'Escape') {
+      setIsEditingName(false)
+    }
+  }
+
   const handleConfirmAddExercise = (entry) => {
     if (!activeDay) return
     setDays(previous => previous.map(day => day.id === activeDay.id ? { ...day, exercises: [...day.exercises, entry] } : day))
@@ -56,8 +76,8 @@ export default function SessionPage() {
     }
 
     const finalSession = await endSession()
-    const completedExercises = activeDay.exercises
-      .filter(exercise => exercise.isCompleted)
+    const loggedExercises = activeDay.exercises
+      .filter(exercise => exercise.isCompleted || exercise.isStarted)
       .map(exercise => ({
         id: exercise.id,
         name: exercise.name,
@@ -74,7 +94,7 @@ export default function SessionPage() {
       startedAt: finalSession.startedAt,
       endedAt: finalSession.endedAt,
       durationMs: finalSession.durationMs,
-      exercises: completedExercises,
+      exercises: loggedExercises,
     })
 
     setDays(previous => previous.map(day => day.id === activeDay.id ? { ...day, isStarted: false } : day))
@@ -93,7 +113,33 @@ export default function SessionPage() {
           <div className="flex items-center gap-3 px-5 py-3">
             <div className="min-w-0 flex-1">
               <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--accent)]">{new Date(session.startedAt).toLocaleDateString('en-GB')}</p>
-              <h1 className="truncate text-xl">{activeDay.name}</h1>
+              {isEditingName ? (
+                <input
+                  type="text"
+                  value={editedName}
+                  onChange={(e) => setEditedName(e.target.value)}
+                  onBlur={handleSaveName}
+                  onKeyDown={handleNameKeyDown}
+                  autoFocus
+                  className="w-full border-2 border-[var(--accent)] bg-[var(--surface)] px-2 py-1 text-xl text-[var(--ink)]"
+                />
+              ) : (
+                <div className="flex min-w-0 items-center gap-2">
+                  <h1 className="truncate text-xl">{activeDay.name}</h1>
+                  <button
+                    type="button"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-slate-300 bg-slate-100 text-xs text-slate-600 transition-colors hover:border-slate-500 hover:text-slate-900"
+                    onClick={() => {
+                      setEditedName(activeDay.name)
+                      setIsEditingName(true)
+                    }}
+                    title="Edit day name"
+                    aria-label="Edit day name"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                </div>
+              )}
             </div>
             <button type="button" onClick={handleEndSession} className="min-h-11 bg-[var(--accent)] px-3 text-xs font-bold text-white">END</button>
           </div>
@@ -101,7 +147,7 @@ export default function SessionPage() {
         </header>
         <WorkoutDay
           day={activeDay}
-          onDayNameChange={(id, name) => setDays(previous => previous.map(day => day.id === id ? { ...day, name } : day))}
+          onDayNameChange={handleDayNameChange}
           onToggleCollapse={() => {}}
           onToggleDayStart={(_, started) => { if (!started) handleEndSession() }}
           onRemoveDay={() => {}}

@@ -82,8 +82,8 @@ export default function WorkoutsPage() {
     try {
       const finalSession = await endSession()
       if (!finalSession) return
-      const completedExercises = (activeDay?.exercises || []).filter(exercise => exercise.isCompleted).map(exercise => ({ id: exercise.id, name: exercise.name, completedAt: exercise.completedAt || finalSession.endedAt, sets: exercise.sets.filter(set => set.currentWeight !== '' && set.currentReps !== '').map(set => ({ setNumber: set.setNumber, weight: set.currentWeight, reps: set.currentReps, loggedAt: exercise.completedAt || finalSession.endedAt })) })).filter(exercise => exercise.sets.length > 0)
-      await saveWorkoutLog(user.uid, { dayId: activeDay?.id, dayName: activeDay?.name || 'Workout Day', startedAt: finalSession.startedAt, endedAt: finalSession.endedAt, durationMs: finalSession.durationMs, exercises: completedExercises })
+      const loggedExercises = (activeDay?.exercises || []).filter(exercise => exercise.isCompleted || exercise.isStarted).map(exercise => ({ id: exercise.id, name: exercise.name, completedAt: exercise.completedAt || finalSession.endedAt, sets: exercise.sets.filter(set => set.currentWeight !== '' && set.currentReps !== '').map(set => ({ setNumber: set.setNumber, weight: set.currentWeight, reps: set.currentReps, loggedAt: exercise.completedAt || finalSession.endedAt })) })).filter(exercise => exercise.sets.length > 0)
+      await saveWorkoutLog(user.uid, { dayId: activeDay?.id, dayName: activeDay?.name || 'Workout Day', startedAt: finalSession.startedAt, endedAt: finalSession.endedAt, durationMs: finalSession.durationMs, exercises: loggedExercises })
     } catch (error) { console.error('Failed to save workout session or log:', error) }
   }
 

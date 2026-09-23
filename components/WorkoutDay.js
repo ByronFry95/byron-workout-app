@@ -204,7 +204,34 @@ export default function WorkoutDay({
         {homeMode && (
           <div className="mb-4">
             <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--n-600)]">{new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
-            <h2 className="mt-1 text-3xl text-[var(--ink)]">{day.name}</h2>
+            {isEditingName ? (
+              <input
+                type="text"
+                value={editedName}
+                onChange={(e) => setEditedName(e.target.value)}
+                onBlur={handleSaveName}
+                onKeyDown={handleKeyDown}
+                autoFocus
+                className="mt-1 w-full border-2 border-[var(--accent)] bg-[var(--surface)] px-2 py-1 text-3xl text-[var(--ink)]"
+              />
+            ) : (
+              <div className="mt-1 flex min-w-0 items-center gap-2">
+                <h2 className="min-w-0 flex-1 break-words text-3xl text-[var(--ink)]">{day.name}</h2>
+                <button
+                  type="button"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-slate-300 bg-slate-100 text-xs text-slate-600 transition-colors hover:border-slate-500 hover:text-slate-900"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    setEditedName(day.name)
+                    setIsEditingName(true)
+                  }}
+                  title="Edit day name"
+                  aria-label="Edit day name"
+                >
+                  <Pencil size={14} />
+                </button>
+              </div>
+            )}
             <div className="mt-3 flex flex-wrap gap-5 border-y border-[var(--hairline)] py-2 text-xs font-bold uppercase tracking-wide text-[var(--n-600)]">
               <span>{exerciseCount} exercises</span><span>{setCount} sets</span><span>Last done {lastCompletedLabel}</span>
             </div>
