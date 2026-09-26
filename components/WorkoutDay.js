@@ -15,6 +15,7 @@ export default function WorkoutDay({
   onUpdateExercise,
   homeMode = false,
   sessionMode = false,
+  sessionId = null,
   lastCompletedAt = null
 }) {
   const [isEditingName, setIsEditingName] = useState(false)
@@ -268,6 +269,7 @@ export default function WorkoutDay({
                   key={exercise.id}
                   exercise={exercise}
                   dayId={day.id}
+                  sessionId={sessionId}
                   isExpanded={expandedExerciseId === exercise.id}
                   isOtherExerciseExpanded={expandedExerciseId !== null && expandedExerciseId !== exercise.id}
                   onExpand={handleExerciseExpand}

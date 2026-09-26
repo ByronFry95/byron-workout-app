@@ -170,6 +170,10 @@ main {
   display: none;
 }
 
+.app-nav-mobile-header {
+  display: none;
+}
+
 .app-nav-item {
   display: flex;
   min-width: 0;
@@ -203,6 +207,25 @@ main {
   }
 
   .app-nav-desktop {
+    display: none;
+  }
+
+  .app-nav-mobile-header {
+    display: flex;
+    min-height: 3.5rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    border-bottom: 1px solid var(--hairline);
+    background-color: var(--surface);
+    padding: 0.5rem 1rem;
+  }
+
+  .app-nav + main > h1:first-child {
+    display: none;
+  }
+
+  .session-day-name {
     display: none;
   }
 

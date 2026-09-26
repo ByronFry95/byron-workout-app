@@ -55,8 +55,16 @@ export default function WorkoutsPage() {
   const handleToggleDayCollapse = (id, collapsed) => setDays(days.map(day => day.id === id ? { ...day, isCollapsed: collapsed } : day))
 
   const handleToggleDayStart = async (id, started) => {
-    setDays(days.map(day => ({ ...day, isStarted: day.id === (started ? id : null) })))
+    const nextDays = days.map(day => ({
+      ...day,
+      isStarted: day.id === (started ? id : null),
+      exercises: started && day.id === id
+        ? day.exercises.map(exercise => ({ ...exercise, isStarted: false, isCompleted: false, completedAt: null }))
+        : day.exercises,
+    }))
+    setDays(nextDays)
     if (started) {
+      await saveWorkoutDays(user.uid, nextDays).catch(error => console.error('Failed to reset workout exercises:', error))
       await startSession({ dayId: id }).catch(error => console.error('Failed to save workout start:', error))
       router.push('/session')
     } else handleEndDay()
@@ -77,13 +85,17 @@ export default function WorkoutsPage() {
 
   const handleEndDay = async () => {
     const activeDay = days.find(day => day.isStarted)
-    if (activeDay) setDays(days.map(day => day.id === activeDay.id ? { ...day, isStarted: false } : day))
+    if (activeDay) setDays(previous => previous.map(day => day.id === activeDay.id
+      ? { ...day, isStarted: false, exercises: day.exercises.map(exercise => ({ ...exercise, isStarted: false })) }
+      : day
+    ))
     if (!workoutSession.startedAt) return
     try {
       const finalSession = await endSession()
       if (!finalSession) return
-      const loggedExercises = (activeDay?.exercises || []).filter(exercise => exercise.isCompleted || exercise.isStarted).map(exercise => ({ id: exercise.id, name: exercise.name, completedAt: exercise.completedAt || finalSession.endedAt, sets: exercise.sets.filter(set => set.currentWeight !== '' && set.currentReps !== '').map(set => ({ setNumber: set.setNumber, weight: set.currentWeight, reps: set.currentReps, loggedAt: exercise.completedAt || finalSession.endedAt })) })).filter(exercise => exercise.sets.length > 0)
-      await saveWorkoutLog(user.uid, { dayId: activeDay?.id, dayName: activeDay?.name || 'Workout Day', startedAt: finalSession.startedAt, endedAt: finalSession.endedAt, durationMs: finalSession.durationMs, exercises: loggedExercises })
+      const activeSessionId = finalSession.sessionId ?? finalSession.startedAt
+      const loggedExercises = (activeDay?.exercises || []).map(exercise => ({ id: exercise.id, name: exercise.name, completedAt: exercise.completedAt || finalSession.endedAt, sets: exercise.sets.filter(set => set.loggedSessionId === activeSessionId && set.currentWeight !== '' && set.currentReps !== '').map(set => ({ setNumber: set.setNumber, weight: set.currentWeight, reps: set.currentReps, loggedAt: set.loggedAt })) })).filter(exercise => exercise.sets.length > 0)
+      await saveWorkoutLog(user.uid, { dayId: activeDay?.id, dayName: activeDay?.name || 'Workout Day', startedAt: finalSession.startedAt, endedAt: finalSession.endedAt, durationMs: finalSession.durationMs, sessionId: activeSessionId, exercises: loggedExercises })
     } catch (error) { console.error('Failed to save workout session or log:', error) }
   }
 

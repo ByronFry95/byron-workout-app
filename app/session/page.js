@@ -25,7 +25,6 @@ export default function SessionPage() {
     if (authLoading) return
     if (!user) {
       router.push('/login')
-      return
     }
 
     getWorkoutDays(user.uid)
@@ -76,15 +75,15 @@ export default function SessionPage() {
     }
 
     const finalSession = await endSession()
+    const activeSessionId = finalSession.sessionId ?? finalSession.startedAt
     const loggedExercises = activeDay.exercises
-      .filter(exercise => exercise.isCompleted || exercise.isStarted)
       .map(exercise => ({
         id: exercise.id,
         name: exercise.name,
         completedAt: exercise.completedAt || finalSession.endedAt,
         sets: exercise.sets
-          .filter(set => set.currentWeight !== '' && set.currentReps !== '')
-          .map(set => ({ setNumber: set.setNumber, weight: set.currentWeight, reps: set.currentReps, loggedAt: exercise.completedAt || finalSession.endedAt })),
+          .filter(set => set.loggedSessionId === activeSessionId && set.currentWeight !== '' && set.currentReps !== '')
+          .map(set => ({ setNumber: set.setNumber, weight: set.currentWeight, reps: set.currentReps, loggedAt: set.loggedAt })),
       }))
       .filter(exercise => exercise.sets.length > 0)
 
@@ -94,10 +93,14 @@ export default function SessionPage() {
       startedAt: finalSession.startedAt,
       endedAt: finalSession.endedAt,
       durationMs: finalSession.durationMs,
+      sessionId: activeSessionId,
       exercises: loggedExercises,
     })
 
-    setDays(previous => previous.map(day => day.id === activeDay.id ? { ...day, isStarted: false } : day))
+    setDays(previous => previous.map(day => day.id === activeDay.id
+      ? { ...day, isStarted: false, exercises: day.exercises.map(exercise => ({ ...exercise, isStarted: false })) }
+      : day
+    ))
     router.push('/')
   }
 
@@ -107,7 +110,7 @@ export default function SessionPage() {
 
   return (
     <>
-      <AppNav />
+      <AppNav title={activeDay.name} />
       <main className="p-0">
         <header className="sticky top-0 z-30 border-b-2 border-[var(--accent)] bg-[var(--surface)]">
           <div className="flex items-center gap-3 px-5 py-3">
@@ -115,16 +118,16 @@ export default function SessionPage() {
               <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--accent)]">{new Date(session.startedAt).toLocaleDateString('en-GB')}</p>
               {isEditingName ? (
                 <input
+                  className="session-day-name w-full border-2 border-[var(--accent)] bg-[var(--surface)] px-2 py-1 text-xl text-[var(--ink)]"
                   type="text"
                   value={editedName}
                   onChange={(e) => setEditedName(e.target.value)}
                   onBlur={handleSaveName}
                   onKeyDown={handleNameKeyDown}
                   autoFocus
-                  className="w-full border-2 border-[var(--accent)] bg-[var(--surface)] px-2 py-1 text-xl text-[var(--ink)]"
                 />
               ) : (
-                <div className="flex min-w-0 items-center gap-2">
+                <div className="session-day-name flex min-w-0 items-center gap-2">
                   <h1 className="truncate text-xl">{activeDay.name}</h1>
                   <button
                     type="button"
@@ -155,6 +158,7 @@ export default function SessionPage() {
           onRemoveExercise={() => {}}
           onUpdateExercise={(dayId, exerciseId, updated) => updateExercise(dayId, exerciseId, updated)}
           sessionMode
+          sessionId={session.sessionId ?? session.startedAt}
         />
       </main>
       <AddExerciseSheet open={addExerciseOpen} onClose={() => setAddExerciseOpen(false)} dayName={activeDay.name} onAdd={handleConfirmAddExercise} />

@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/authContext'
-import { BarChart3, BookOpen, Dumbbell, List, LogOut, UserRound, X } from 'lucide-react'
+import { BarChart3, BookOpen, ClipboardList, Dumbbell, List, LogOut, UserRound, X } from 'lucide-react'
 
 const navigation = [
   { href: '/workouts', label: 'Workouts', shortLabel: 'Workouts', icon: Dumbbell },
@@ -12,13 +12,24 @@ const navigation = [
   { href: '/metrics', label: 'Body Metrics', shortLabel: 'Metrics', icon: UserRound },
   { href: '/data', label: 'Data', shortLabel: 'Data', icon: List },
   { href: '/stats', label: 'Stats', shortLabel: 'Stats', icon: BarChart3 },
+  { href: '/dev-notes', label: 'Dev Notes', shortLabel: 'Dev Notes', icon: ClipboardList },
 ]
 
-export default function AppNav() {
+const pageTitles = {
+  '/workouts': 'Workout Tracker',
+  '/library': 'Exercise Library',
+  '/metrics': 'Body Metrics',
+  '/data': 'Workout Data',
+  '/stats': 'Stats',
+  '/dev-notes': 'Dev Notes',
+}
+
+export default function AppNav({ title }) {
   const pathname = usePathname()
   const router = useRouter()
   const { logout } = useAuth()
   const [profileOpen, setProfileOpen] = useState(false)
+  const mobileTitle = title || pageTitles[pathname] || (pathname === '/session' ? 'Workout Session' : 'Training App')
 
   const handleLogout = async () => {
     await logout()
@@ -27,6 +38,13 @@ export default function AppNav() {
 
   return (
     <nav className="app-nav">
+      <div className="app-nav-mobile-header">
+        <h1 className="truncate text-lg text-[var(--ink)]">{mobileTitle}</h1>
+        <button type="button" onClick={() => setProfileOpen(true)} className="flex h-11 w-11 shrink-0 items-center justify-center border border-[var(--divider)] bg-[var(--bg)] text-[var(--ink)]" title="Profile" aria-label="Open profile">
+          <UserRound size={19} />
+        </button>
+      </div>
+
       <div className="app-nav-desktop">
         <div className="flex items-center gap-2 sm:gap-5">
           {navigation.map(item => (

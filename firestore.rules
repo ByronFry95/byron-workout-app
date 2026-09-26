@@ -1,0 +1,57 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.admin == true;
+    }
+
+    match /users/{userId} {
+      allow read, write: if isSignedIn()
+        && request.auth.uid == userId;
+
+      match /metrics/{metricId} {
+        allow read, write: if isSignedIn()
+          && request.auth.uid == userId;
+      }
+
+      match /workoutLogs/{logId} {
+        allow read, write: if isSignedIn()
+          && request.auth.uid == userId;
+      }
+    }
+
+    match /devNotes/{noteId} {
+      allow create: if isSignedIn()
+        && request.resource.data.keys().hasAll(['userId', 'userEmail', 'title', 'type', 'page', 'details', 'status', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['userId', 'userEmail', 'title', 'type', 'page', 'details', 'status', 'createdAt'])
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.userEmail == request.auth.token.email
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 120
+        && request.resource.data.type in ['Bug', 'Usability', 'Idea']
+        && request.resource.data.page is string
+        && request.resource.data.page.size() <= 80
+        && request.resource.data.details is string
+        && request.resource.data.details.size() > 0
+        && request.resource.data.details.size() <= 5000
+        && request.resource.data.status == 'open'
+        && request.resource.data.createdAt == request.time;
+
+      allow read: if isAdmin()
+        || (isSignedIn() && resource.data.userId == request.auth.uid);
+
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
+        && request.resource.data.status in ['open', 'in-progress', 'resolved', 'wont-fix']
+        && request.resource.data.updatedAt == request.time;
+
+      allow delete: if isAdmin();
+    }
+  }
+}

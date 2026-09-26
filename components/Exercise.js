@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Check, ChevronDown, ChevronUp, ChevronUp as WeightUp, Copy, Minus, Pencil, Play, Plus, Square, X } from 'lucide-react'
 
-export default function Exercise({ exercise, dayId, isExpanded, isOtherExerciseExpanded, homeMode = false, editMode = false, sessionMode = false, onExpand, onCollapse, onRemove, onUpdate }) {
+export default function Exercise({ exercise, dayId, sessionId, isExpanded, isOtherExerciseExpanded, homeMode = false, editMode = false, sessionMode = false, onExpand, onCollapse, onRemove, onUpdate }) {
   const [isEditingName, setIsEditingName] = useState(false)
   const [editedName, setEditedName] = useState(exercise.name)
   const [sets, setSets] = useState(exercise.sets)
@@ -15,14 +15,10 @@ export default function Exercise({ exercise, dayId, isExpanded, isOtherExerciseE
   const [undoState, setUndoState] = useState(null)
   const [activeSetEditor, setActiveSetEditor] = useState(null)
   const [completedSetNumbers, setCompletedSetNumbers] = useState(new Set())
-  const autoStarted = useRef(false)
 
   useEffect(() => {
-    if (sessionMode && !autoStarted.current && !isStarted && !exercise.isCompleted) {
-      autoStarted.current = true
-      handleStartExercise()
-    }
-  }, [sessionMode, isStarted, exercise.isCompleted])
+    setIsStarted(Boolean(exercise.isStarted))
+  }, [exercise.isStarted])
 
   useEffect(() => {
     if (isExpanded && isCollapsed) {
@@ -149,7 +145,11 @@ export default function Exercise({ exercise, dayId, isExpanded, isOtherExerciseE
 
   const handleSaveSet = (setNumber) => {
     setCompletedSetNumbers(previous => new Set(previous).add(setNumber))
-    const updatedSets = sets.map(set => set.setNumber === setNumber ? { ...set, loggedAt: set.loggedAt || new Date().toISOString() } : set)
+    const loggedAt = new Date().toISOString()
+    const updatedSets = sets.map(set => set.setNumber === setNumber
+      ? { ...set, loggedAt, loggedSessionId: sessionId ?? null }
+      : set
+    )
     setSets(updatedSets)
     onUpdate({ ...exercise, sets: updatedSets, isStarted, isCollapsed, markForIncrease })
     navigator.vibrate?.(15)
@@ -207,13 +207,13 @@ export default function Exercise({ exercise, dayId, isExpanded, isOtherExerciseE
             className="w-full max-w-[280px] border-2 border-[var(--accent)] bg-[var(--surface)] px-3 py-2 text-base font-medium text-[var(--ink)] outline-none"
           />
         ) : (
-          <div className="min-w-0 w-full text-[var(--ink)]">
+          <div className="min-w-0 w-full pr-36 text-[var(--ink)] sm:pr-0">
             <h3 className="min-w-0 max-w-full break-words text-lg font-semibold text-[var(--ink)]">{exercise.name}</h3>
             {isStarted && <span className="mt-1 inline-block rounded-full bg-[var(--accent-100)] px-2 py-1 text-[0.65rem] font-bold text-[var(--accent)]">In Progress</span>}
           </div>
         )}
 
-        {(sessionMode || editMode) && <div className={sessionMode ? 'absolute right-3 top-3 flex flex-nowrap gap-2 sm:right-4 sm:top-4 sm:grid sm:w-auto sm:grid-cols-4' : 'flex w-full flex-nowrap gap-2 sm:ml-auto sm:w-auto sm:grid sm:grid-cols-2'}>
+        {(sessionMode || editMode) && <div className={sessionMode ? 'absolute right-3 top-3 flex flex-nowrap gap-2 sm:static sm:grid sm:w-auto sm:grid-cols-4' : 'flex w-full flex-nowrap gap-2 sm:ml-auto sm:w-auto sm:grid sm:grid-cols-2'}>
           {sessionMode && <button
             type="button"
             className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-transparent text-sm font-bold text-[var(--ink)] transition-colors hover:bg-[var(--n-300)] sm:flex sm:h-11 sm:w-auto"
@@ -295,7 +295,7 @@ export default function Exercise({ exercise, dayId, isExpanded, isOtherExerciseE
 
       <div className={`overflow-hidden transition-all duration-300 ${isCollapsed ? 'max-h-0 opacity-0' : 'mt-4 opacity-100'}`}>
         <div className="flex flex-col gap-1 border-y-2 border-[var(--divider)]">
-          <div className="grid min-h-9 grid-cols-[2.5rem_1fr_1fr_1fr_2.75rem] items-center gap-2 border-b-2 border-[var(--divider)] px-1 text-[0.65rem] font-bold uppercase tracking-wide text-[var(--n-600)]">
+          <div className="grid min-h-9 grid-cols-[2.5rem_1fr_1fr_1fr_5.5rem] items-center gap-2 border-b-2 border-[var(--divider)] px-1 text-[0.65rem] font-bold uppercase tracking-wide text-[var(--n-600)]">
             <span>Set</span>
             <span>Last Session</span>
             <span>Kg</span>
@@ -303,14 +303,10 @@ export default function Exercise({ exercise, dayId, isExpanded, isOtherExerciseE
             <span aria-hidden="true" />
           </div>
           {sets.map((set) => {
-            const previousWeight = Number(set.previousWeight || 0)
-            const previousReps = Number(set.previousReps || 0)
-            const currentWeight = Number(set.currentWeight || 0)
-            const currentReps = Number(set.currentReps || 0)
             const isSetComplete = Boolean(set.loggedAt) || completedSetNumbers.has(set.setNumber)
 
             return (
-              <div key={set.setNumber} className={`grid min-h-12 grid-cols-[2.5rem_1fr_1fr_1fr_2.75rem] items-center gap-2 border-b border-[var(--hairline)] px-1 py-1 ${isSetComplete ? 'opacity-45' : ''}`}>
+              <div key={set.setNumber} className={`grid min-h-12 grid-cols-[2.5rem_1fr_1fr_1fr_5.5rem] items-center gap-2 border-b border-[var(--hairline)] px-1 py-1 ${isSetComplete ? 'opacity-45' : ''}`}>
                 <span className="num text-sm text-[var(--n-700)]">{set.setNumber}</span>
                 <button
                   type="button"
@@ -324,7 +320,10 @@ export default function Exercise({ exercise, dayId, isExpanded, isOtherExerciseE
                 </button>
                 <button type="button" onClick={() => setActiveSetEditor({ setNumber: set.setNumber, field: 'currentWeight' })} className="min-h-11 border-0 bg-transparent text-left num text-[var(--ink)]">{set.currentWeight || 'kg'}</button>
                 <button type="button" onClick={() => setActiveSetEditor({ setNumber: set.setNumber, field: 'currentReps' })} className="min-h-11 border-0 bg-transparent text-left num text-[var(--ink)]">{set.currentReps || 'reps'}</button>
-                <button type="button" onClick={() => handleSaveSet(set.setNumber)} className="flex h-11 w-11 items-center justify-center border-2 border-[var(--accent)] bg-[var(--accent-100)] text-[var(--accent)]" aria-label={`Log set ${set.setNumber}`}><Check size={18} /></button>
+                <div className="flex items-center gap-1">
+                  <button type="button" onClick={() => handleSaveSet(set.setNumber)} className="flex h-10 w-10 items-center justify-center border-2 border-[var(--accent)] bg-[var(--accent-100)] text-[var(--accent)]" aria-label={`Log set ${set.setNumber}`} title="Log set"><Check size={18} /></button>
+                  <button type="button" onClick={() => handleRemoveSet(set.setNumber)} disabled={sets.length <= 1} className="flex h-10 w-10 items-center justify-center border-2 border-[var(--hairline)] text-[var(--n-600)] disabled:opacity-30" aria-label={`Remove set ${set.setNumber}`} title="Remove set"><X size={16} /></button>
+                </div>
               </div>
             )
           })}
