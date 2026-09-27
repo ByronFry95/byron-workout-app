@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Exercise from './Exercise'
-import { ChevronDown, ChevronUp, Minus, Pencil, Plus, X } from 'lucide-react'
+import { ChevronDown, ChevronUp, Pencil, Plus, Trash2, X } from 'lucide-react'
 
 export default function WorkoutDay({
   day,
@@ -23,8 +23,10 @@ export default function WorkoutDay({
   const [editedName, setEditedName] = useState(day.name)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [expandedExerciseId, setExpandedExerciseId] = useState(null)
-  const [dragX, setDragX] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
+  const cardRef = useRef(null)
+  const deleteActionRef = useRef(null)
+  const animationFrame = useRef(null)
   const dragStartX = useRef(0)
   const currentDragX = useRef(0)
   const didSwipe = useRef(false)
@@ -69,6 +71,7 @@ export default function WorkoutDay({
     if (event.target.closest('[data-exercise-card]')) return
     if (event.pointerType === 'mouse' && event.button !== 0) return
     setIsDragging(true)
+    if (cardRef.current) cardRef.current.style.transition = 'none'
     dragStartX.current = event.clientX
     startY.current = event.clientY
     axisLocked.current = false
@@ -85,23 +88,44 @@ export default function WorkoutDay({
       axisLocked.current = Math.abs(delta) > Math.abs(verticalDelta)
     }
     if (!axisLocked.current) return
-    if (delta < 0) {
-      const nextDragX = Math.max(delta, -140)
-      currentDragX.current = nextDragX
-      didSwipe.current = Math.abs(nextDragX) > 8
-      setDragX(nextDragX)
-    }
+    const nextDragX = Math.max(Math.min(delta, 0), -112)
+    currentDragX.current = nextDragX
+    didSwipe.current = Math.abs(nextDragX) > 8
+    if (animationFrame.current !== null) window.cancelAnimationFrame(animationFrame.current)
+    animationFrame.current = window.requestAnimationFrame(() => {
+      if (cardRef.current) cardRef.current.style.transform = `translate3d(${nextDragX}px, 0, 0)`
+      if (deleteActionRef.current) deleteActionRef.current.style.opacity = String(Math.min(1, Math.abs(nextDragX) / 64))
+    })
   }
 
   const handlePointerUp = (event) => {
     if (event.target.closest('[data-exercise-card]')) return
-    if (currentDragX.current <= -100) {
+    if (currentDragX.current <= -92) {
       setShowDeleteModal(true)
     }
     setIsDragging(false)
     event.currentTarget.releasePointerCapture?.(event.pointerId)
     currentDragX.current = 0
-    setDragX(0)
+    if (animationFrame.current !== null) window.cancelAnimationFrame(animationFrame.current)
+    window.requestAnimationFrame(() => {
+      if (cardRef.current) {
+        cardRef.current.style.transition = 'transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1)'
+        cardRef.current.style.transform = 'translate3d(0, 0, 0)'
+      }
+      if (deleteActionRef.current) deleteActionRef.current.style.opacity = '0'
+    })
+  }
+
+  const handlePointerCancel = (event) => {
+    setIsDragging(false)
+    event.currentTarget.releasePointerCapture?.(event.pointerId)
+    currentDragX.current = 0
+    if (animationFrame.current !== null) window.cancelAnimationFrame(animationFrame.current)
+    if (cardRef.current) {
+      cardRef.current.style.transition = 'transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1)'
+      cardRef.current.style.transform = 'translate3d(0, 0, 0)'
+    }
+    if (deleteActionRef.current) deleteActionRef.current.style.opacity = '0'
   }
 
   const handleCardTap = (event) => {
@@ -125,12 +149,13 @@ export default function WorkoutDay({
   return (
     <div className={`relative overflow-hidden ${homeMode || sessionMode ? '' : 'border-2 border-[var(--divider)]'}`}>
       <div
-        className={`relative z-10 overflow-hidden transition-transform duration-200 ease-out ${homeMode || sessionMode ? 'bg-transparent' : 'panel-card p-5'}`}
-        style={{ transform: `translateX(${dragX}px)` }}
+        ref={cardRef}
+        className={`relative z-10 overflow-hidden ${isDragging ? 'transition-none' : 'transition-transform duration-200 ease-out'} ${homeMode || sessionMode ? 'bg-transparent' : 'panel-card p-5'}`}
+        style={{ transform: 'translate3d(0, 0, 0)', touchAction: 'pan-y', willChange: 'transform' }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerUp}
+        onPointerCancel={handlePointerCancel}
         onClick={handleCardTap}
       >
         {!sessionMode && !homeMode && <div className="mb-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -301,16 +326,10 @@ export default function WorkoutDay({
         )}
       </div>
 
-      {dragX < 0 && (
-        <div
-          className="pointer-events-none absolute inset-y-2 right-[-8px] z-0 flex items-center justify-center border border-[var(--accent)] bg-[var(--accent-100)] shadow-sm"
-          style={{ width: `${Math.min(Math.abs(dragX), 110)}px` }}
-        >
-          <div className="flex h-8 w-8 items-start justify-center border border-[var(--accent)] bg-[var(--accent-100)] pt-[2px] text-2xl font-bold leading-none text-[var(--accent-700)]">
-            <Minus size={18} />
-          </div>
-        </div>
-      )}
+      <div ref={deleteActionRef} className="pointer-events-none absolute inset-y-0 right-0 z-0 flex w-28 flex-col items-center justify-center gap-1 bg-[var(--accent)] text-white opacity-0">
+        <Trash2 size={20} aria-hidden="true" />
+        <span className="text-[0.65rem] font-bold uppercase">Delete day</span>
+      </div>
 
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-end bg-black/40 sm:items-center" onClick={() => setShowDeleteModal(false)}>

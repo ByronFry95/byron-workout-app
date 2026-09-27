@@ -64,7 +64,18 @@ export default function WorkoutsPage() {
       ...day,
       isStarted: day.id === (started ? id : null),
       exercises: started && day.id === id
-        ? day.exercises.map(exercise => ({ ...exercise, isStarted: false, isCompleted: false, completedAt: null }))
+        ? day.exercises.map(exercise => ({
+          ...exercise,
+          isStarted: false,
+          isCompleted: false,
+          completedAt: null,
+          sets: exercise.sets.map(set => {
+            const nextSet = { ...set }
+            delete nextSet.loggedAt
+            delete nextSet.loggedSessionId
+            return nextSet
+          }),
+        }))
         : day.exercises,
     }))
     setDays(nextDays)

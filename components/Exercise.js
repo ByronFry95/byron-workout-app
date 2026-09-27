@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Check, ChevronDown, ChevronUp, ChevronUp as WeightUp, Copy, Minus, Pencil, Play, Plus, Square, X } from 'lucide-react'
 
 export default function Exercise({ exercise, dayId, sessionId, isExpanded, isOtherExerciseExpanded, homeMode = false, editMode = false, sessionMode = false, onExpand, onCollapse, onRemove, onUpdate }) {
@@ -15,6 +16,19 @@ export default function Exercise({ exercise, dayId, sessionId, isExpanded, isOth
   const [undoState, setUndoState] = useState(null)
   const [activeSetEditor, setActiveSetEditor] = useState(null)
   const [completedSetNumbers, setCompletedSetNumbers] = useState(new Set())
+  const [resolvedEquipment, setResolvedEquipment] = useState(exercise.equipment || '')
+
+  useEffect(() => {
+    if (exercise.equipment) {
+      setResolvedEquipment(exercise.equipment)
+      return
+    }
+    if (!exercise.libraryId) return
+
+    import('@/lib/exerciseLibrary').then(({ getExerciseById }) => {
+      setResolvedEquipment(getExerciseById(exercise.libraryId)?.equipment || '')
+    })
+  }, [exercise.equipment, exercise.libraryId])
 
   useEffect(() => {
     setIsStarted(Boolean(exercise.isStarted))
@@ -161,6 +175,10 @@ export default function Exercise({ exercise, dayId, sessionId, isExpanded, isOth
     const value = Number(set?.[field] || 0) + amount
     handleSetChange(setNumber, field, String(Math.max(0, value)))
   }
+
+  const isDumbbell = resolvedEquipment.toLowerCase().includes('dumbbell')
+  const weightStep = isDumbbell ? 2 : 2.5
+  const quickWeightIncrements = isDumbbell ? [2, 4, 6] : [5, 10, 20]
 
   const handleAddSet = () => {
     const newSet = {
@@ -339,23 +357,40 @@ export default function Exercise({ exercise, dayId, sessionId, isExpanded, isOth
         </button>
       </div>
 
-      {activeSetEditor && (() => {
+      {activeSetEditor && typeof document !== 'undefined' && createPortal((() => {
         const activeSet = sets.find(set => set.setNumber === activeSetEditor.setNumber)
-        const fieldLabel = 'Set values'
-        const step = activeSetEditor.field === 'currentWeight' ? 2.5 : 1
         return (
-          <div className="fixed inset-0 z-50 flex items-end bg-black/40" onClick={() => setActiveSetEditor(null)}>
-            <div className="w-full border-t-2 border-[var(--divider)] bg-[var(--surface)] p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))]" onClick={event => event.stopPropagation()}>
+          <div className="fixed inset-0 z-[60] flex items-end bg-black/40" onClick={() => setActiveSetEditor(null)}>
+            <div role="dialog" aria-modal="true" className="w-full border-t-2 border-[var(--divider)] bg-[var(--surface)] p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))]" onClick={event => event.stopPropagation()}>
               <div className="mx-auto mb-4 h-1 w-12 bg-[var(--n-500)]" />
-              <div className="mb-4 flex items-center justify-between"><h3 className="text-xl">Set {activeSetEditor.setNumber} {fieldLabel}</h3><button type="button" onClick={() => setActiveSetEditor(null)} className="flex h-11 w-11 items-center justify-center border-0 bg-transparent"><X size={20} /></button></div>
+              <div className="mb-4 flex items-center justify-between"><h3 className="text-xl">Set {activeSetEditor.setNumber} values</h3><button type="button" onClick={() => setActiveSetEditor(null)} className="flex h-11 w-11 items-center justify-center border-0 bg-transparent" aria-label="Close set editor"><X size={20} /></button></div>
               <div className="grid grid-cols-2 gap-3">
-                {['currentWeight', 'currentReps'].map(field => <div key={field}><label className="text-xs font-bold uppercase text-[var(--n-600)]">{field === 'currentWeight' ? 'Weight' : 'Reps'}</label><div className="mt-1 flex items-center gap-2"><button type="button" onClick={() => adjustSetValue(activeSetEditor.setNumber, field, field === 'currentWeight' ? -2.5 : -1)} className="flex h-11 w-11 shrink-0 items-center justify-center border-2 border-[var(--divider)]"><Minus size={18} /></button><input type="text" inputMode="decimal" pattern="[0-9]*[.,]?[0-9]*" value={activeSet?.[field] || ''} onChange={event => handleSetChange(activeSetEditor.setNumber, field, event.target.value)} className="min-h-11 min-w-0 w-full border-2 border-[var(--divider)] bg-transparent px-2 num text-xl" /><button type="button" onClick={() => adjustSetValue(activeSetEditor.setNumber, field, field === 'currentWeight' ? 2.5 : 1)} className="flex h-11 w-11 shrink-0 items-center justify-center border-2 border-[var(--divider)]"><Plus size={18} /></button></div></div>)}
+                {['currentWeight', 'currentReps'].map(field => {
+                  const isWeight = field === 'currentWeight'
+                  const step = isWeight ? weightStep : 1
+                  return (
+                    <div key={field}>
+                      <label className="text-xs font-bold uppercase text-[var(--n-600)]">{isWeight ? 'Weight (kg)' : 'Reps'}</label>
+                      <div className="mt-1 flex items-center gap-1.5">
+                        <button type="button" onClick={() => adjustSetValue(activeSetEditor.setNumber, field, -step)} className="flex h-11 w-10 shrink-0 items-center justify-center border-2 border-[var(--divider)]" aria-label={`Decrease ${isWeight ? 'weight' : 'reps'} by ${step}`}><Minus size={18} /></button>
+                        <input type="text" inputMode="decimal" pattern="[0-9]*[.,]?[0-9]*" value={activeSet?.[field] || ''} onChange={event => handleSetChange(activeSetEditor.setNumber, field, event.target.value)} className="min-h-11 min-w-0 w-full border-2 border-[var(--divider)] bg-transparent px-2 num text-xl" />
+                        <button type="button" onClick={() => adjustSetValue(activeSetEditor.setNumber, field, step)} className="flex h-11 w-10 shrink-0 items-center justify-center border-2 border-[var(--divider)]" aria-label={`Increase ${isWeight ? 'weight' : 'reps'} by ${step}`}><Plus size={18} /></button>
+                      </div>
+                      {isWeight && <div className="mt-2">
+                        <span className="text-[0.65rem] font-bold uppercase text-[var(--n-600)]">Quick add</span>
+                        <div className="mt-1 grid grid-cols-3 gap-1">
+                          {quickWeightIncrements.map(amount => <button key={amount} type="button" onClick={() => adjustSetValue(activeSetEditor.setNumber, field, amount)} className="min-h-9 border border-[var(--divider)] px-1 text-xs font-bold">+{amount} kg</button>)}
+                        </div>
+                      </div>}
+                    </div>
+                  )
+                })}
               </div>
               <button type="button" onClick={() => handleSaveSet(activeSetEditor.setNumber)} className="mt-4 min-h-11 w-full bg-[var(--accent)] font-bold text-white">LOG SET</button>
             </div>
           </div>
         )
-      })()}
+      })(), document.body)}
 
       {showUndo && (
         <div className="fixed bottom-24 left-4 right-4 z-50 flex items-center justify-between gap-3 border-2 border-[var(--divider)] bg-[var(--ink)] px-4 py-3 text-sm font-bold text-white sm:bottom-5 sm:left-auto sm:right-5 sm:max-w-sm">
