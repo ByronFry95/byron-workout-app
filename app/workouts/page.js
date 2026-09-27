@@ -12,7 +12,7 @@ import { Plus } from 'lucide-react'
 
 export default function WorkoutsPage() {
   const { user, loading: authLoading } = useAuth()
-  const { session: workoutSession, startSession, endSession, registerEndHandler } = useWorkoutSession()
+  const { session: workoutSession, loading: sessionLoading, startSession, endSession, registerEndHandler } = useWorkoutSession()
   const router = useRouter()
   const [days, setDays] = useState([])
   const [loading, setLoading] = useState(true)
@@ -50,6 +50,11 @@ export default function WorkoutsPage() {
   useEffect(() => {
     if (!loading && user && days.length > 0) saveWorkoutDays(user.uid, days)
   }, [days, loading, user])
+
+  useEffect(() => {
+    if (authLoading || loading || sessionLoading || !user) return
+    if (workoutSession?.startedAt && !workoutSession.endedAt) router.replace('/session')
+  }, [authLoading, loading, sessionLoading, user, workoutSession, router])
 
   const handleDayNameChange = (id, newName) => setDays(days.map(day => day.id === id ? { ...day, name: newName } : day))
   const handleToggleDayCollapse = (id, collapsed) => setDays(days.map(day => day.id === id ? { ...day, isCollapsed: collapsed } : day))
@@ -105,7 +110,7 @@ export default function WorkoutsPage() {
   const visibleDays = startedDayId ? days.filter(day => day.id === startedDayId) : days
   const getLastCompletedDate = dayId => workoutLogs.find(log => log.dayId === dayId)?.endedAt || null
 
-  if (authLoading || loading) return <div className="min-h-screen bg-page px-5 py-10 text-center font-dark">Loading...</div>
+  if (authLoading || loading || sessionLoading || (workoutSession?.startedAt && !workoutSession.endedAt)) return <div className="min-h-screen bg-page px-5 py-10 text-center font-dark">Loading...</div>
   if (!user) return null
   if (loadError) return <div className="min-h-screen bg-page px-5 py-10 text-center font-dark">Firebase error: {loadError}</div>
 
