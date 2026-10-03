@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/authContext'
 import { deleteWorkoutLog, getWorkoutLogs, updateWorkoutLog } from '@/lib/firebaseQueries'
 import { formatUKDate } from '@/lib/chartUtils'
-import AppNav from '@/components/AppNav'
 import Sheet from '@/components/Sheet'
 
 const formatDuration = ms => { const total = Math.floor(Math.max(0, ms || 0) / 60000); return total >= 60 ? `${Math.floor(total / 60)}h ${total % 60}m` : `${total}m` }
@@ -39,5 +38,5 @@ export default function DataPage() {
   const loadMore = async () => { const next = await getWorkoutLogs(user.uid, pageSize, logs.at(-1)?.startedAt); setLogs(previous => [...previous, ...next]); setHasMore(next.length === pageSize) }
   if (authLoading || loading) return <div className="min-h-screen bg-page px-5 py-10 text-center font-dark">Loading data...</div>
   if (!user) return null
-  return <><AppNav /><main><h1 className="mb-6 text-3xl text-[var(--ink)]">Workout Data</h1>{loadError && <p className="text-[var(--accent-700)]">{loadError}</p>}{logs.length === 0 ? <div className="border-y border-[var(--hairline)] py-6"><p className="font-bold">No workout logs yet</p><p className="mt-1 text-sm text-[var(--n-600)]">Completed sessions will appear here.</p></div> : Object.entries(groupedLogs).map(([month, monthLogs]) => <section key={month} className="mb-6"><h2 className="sticky top-0 border-b-2 border-[var(--divider)] bg-[var(--bg)] py-2 text-xs font-bold tracking-[0.12em]">{month}</h2>{monthLogs.map(log => <LogCard key={log.id} log={log} onSave={save} onDelete={remove} />)}</section>)}{hasMore && <button type="button" onClick={loadMore} className="min-h-11 w-full border-2 border-[var(--divider)] font-bold text-[var(--ink)]">LOAD MORE</button>}</main></>
+  return <><main><h1 className="mb-6 text-3xl text-[var(--ink)]">Workout Data</h1>{loadError && <p className="text-[var(--accent-700)]">{loadError}</p>}{logs.length === 0 ? <div className="border-y border-[var(--hairline)] py-6"><p className="font-bold">No workout logs yet</p><p className="mt-1 text-sm text-[var(--n-600)]">Completed sessions will appear here.</p></div> : Object.entries(groupedLogs).map(([month, monthLogs]) => <section key={month} className="mb-6"><h2 className="sticky top-0 border-b-2 border-[var(--divider)] bg-[var(--bg)] py-2 text-xs font-bold tracking-[0.12em]">{month}</h2>{monthLogs.map(log => <LogCard key={log.id} log={log} onSave={save} onDelete={remove} />)}</section>)}{hasMore && <button type="button" onClick={loadMore} className="min-h-11 w-full border-2 border-[var(--divider)] font-bold text-[var(--ink)]">LOAD MORE</button>}</main></>
 }

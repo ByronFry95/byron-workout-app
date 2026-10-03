@@ -1,18 +1,22 @@
 'use client'
 
-import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/authContext'
-import { BarChart3, BookOpen, ClipboardList, Dumbbell, List, LogOut, UserRound, X } from 'lucide-react'
+import PopoverMenu from '@/components/PopoverMenu'
+import { useEffect } from 'react'
+import { BarChart3, BookOpen, ClipboardList, Dumbbell, Ellipsis, List, LogOut, UserRound } from 'lucide-react'
 
-const navigation = [
-  { href: '/workouts', label: 'Workouts', shortLabel: 'Workouts', icon: Dumbbell },
-  { href: '/library', label: 'Library', shortLabel: 'Library', icon: BookOpen },
-  { href: '/metrics', label: 'Body Metrics', shortLabel: 'Metrics', icon: UserRound },
-  { href: '/data', label: 'Data', shortLabel: 'Data', icon: List },
-  { href: '/stats', label: 'Stats', shortLabel: 'Stats', icon: BarChart3 },
-  { href: '/dev-notes', label: 'Dev Notes', shortLabel: 'Dev Notes', icon: ClipboardList },
+const primaryNavigation = [
+  { href: '/workouts', label: 'Workouts', icon: Dumbbell },
+  { href: '/metrics', label: 'Metrics', icon: UserRound },
+]
+
+const moreNavigation = [
+  { href: '/library', label: 'Library', icon: BookOpen },
+  { href: '/stats', label: 'Stats', icon: BarChart3 },
+  { href: '/data', label: 'Data', icon: List },
+  { href: '/dev-notes', label: 'Dev Notes', icon: ClipboardList },
 ]
 
 const pageTitles = {
@@ -28,59 +32,54 @@ export default function AppNav({ title }) {
   const pathname = usePathname()
   const router = useRouter()
   const { logout } = useAuth()
-  const [profileOpen, setProfileOpen] = useState(false)
   const mobileTitle = title || pageTitles[pathname] || (pathname === '/session' ? 'Workout Session' : 'Training App')
+  const moreActive = moreNavigation.some(item => item.href === pathname)
+
+  useEffect(() => {
+    ;[...primaryNavigation, ...moreNavigation].forEach(item => router.prefetch(item.href))
+  }, [router])
 
   const handleLogout = async () => {
     await logout()
     router.push('/login')
   }
 
+  const moreItems = [
+    ...moreNavigation.map(item => ({ label: item.label, icon: item.icon, onSelect: () => router.push(item.href) })),
+    { divider: true },
+    { label: 'Log out', icon: LogOut, danger: true, onSelect: handleLogout },
+  ]
+
   return (
     <nav className="app-nav">
       <div className="app-nav-mobile-header">
         <h1 className="truncate text-lg text-[var(--ink)]">{mobileTitle}</h1>
-        <button type="button" onClick={() => setProfileOpen(true)} className="flex h-11 w-11 shrink-0 items-center justify-center border border-[var(--divider)] bg-[var(--bg)] text-[var(--ink)]" title="Profile" aria-label="Open profile">
-          <UserRound size={19} />
-        </button>
       </div>
 
       <div className="app-nav-desktop">
-        <div className="flex items-center gap-2 sm:gap-5">
-          {navigation.map(item => (
+        <div className="flex items-center gap-2 sm:gap-3">
+          {primaryNavigation.map(item => (
             <Link key={item.href} href={item.href} className={`nav-link ${pathname === item.href ? 'active' : ''}`}>
               {item.label}
             </Link>
           ))}
-          <button onClick={() => setProfileOpen(true)} className="ml-auto flex min-h-11 items-center gap-2 border-0 bg-transparent px-3 text-sm font-bold text-slate-700">
-            <UserRound size={18} />
-            Profile
-          </button>
+          <div className="ml-auto">
+            <PopoverMenu items={moreItems} ariaLabel="More" triggerClassName={`glass-orange-button ${moreActive ? 'ring-2 ring-[var(--ink)]' : ''}`}><Ellipsis size={18} /></PopoverMenu>
+          </div>
         </div>
       </div>
 
       <div className="app-nav-mobile">
-        {navigation.map(item => (
+        {primaryNavigation.map(item => (
           <Link key={item.href} href={item.href} className={`app-nav-item ${pathname === item.href ? 'active' : ''}`}>
             <item.icon className="app-nav-icon" aria-hidden="true" />
-            <span>{item.shortLabel}</span>
+            <span>{item.label}</span>
           </Link>
         ))}
-      </div>
-
-      {profileOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center" onClick={() => setProfileOpen(false)}>
-          <div className="w-full border-2 border-[var(--divider)] bg-[var(--surface)] p-5 sm:max-w-sm" onClick={event => event.stopPropagation()}>
-            <div className="mb-5 flex items-center justify-between">
-              <h2 className="text-xl">Profile</h2>
-              <button type="button" onClick={() => setProfileOpen(false)} className="flex h-11 w-11 items-center justify-center border-0 bg-transparent"><X size={20} /></button>
-            </div>
-            <button type="button" onClick={handleLogout} className="flex min-h-11 w-full items-center justify-center gap-2 bg-[var(--accent)] px-4 font-bold text-white">
-              <LogOut size={18} /> Logout
-            </button>
-          </div>
+        <div className={`app-nav-item ${moreActive ? 'active' : ''}`}>
+          <PopoverMenu items={moreItems} ariaLabel="More" triggerClassName="app-nav-more"><Ellipsis className="app-nav-icon" aria-hidden="true" /><span>More</span></PopoverMenu>
         </div>
-      )}
+      </div>
     </nav>
   )
 }

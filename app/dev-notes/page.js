@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/authContext'
 import { createDevNote, getDevNotes, updateDevNoteStatus } from '@/lib/firebaseQueries'
-import AppNav from '@/components/AppNav'
 
 const emptyForm = { title: '', type: 'Bug', page: '', details: '' }
 const statuses = [
@@ -100,7 +99,6 @@ export default function DevNotesPage() {
 
   return (
     <>
-      <AppNav />
       <main>
         <h1 className="mb-6 text-3xl text-[var(--ink)]">Dev Notes</h1>
         <section className="border-t-2 border-[var(--divider)] pt-5">

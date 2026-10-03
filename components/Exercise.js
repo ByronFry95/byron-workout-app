@@ -2,10 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Check, ChevronDown, ChevronUp, ChevronUp as WeightUp, Copy, Minus, Pencil, Play, Plus, Square, X } from 'lucide-react'
+import { ArrowLeftRight, Check, ChevronDown, ChevronUp, ChevronUp as WeightUp, Copy, Dumbbell, Ellipsis, Minus, Pencil, Play, Plus, Square, Trash2, X } from 'lucide-react'
+import PopoverMenu from './PopoverMenu'
+import { getExerciseSettings } from '@/lib/exerciseSettings'
 
-export default function Exercise({ exercise, dayId, sessionId, isExpanded, isOtherExerciseExpanded, homeMode = false, editMode = false, sessionMode = false, onExpand, onCollapse, onRemove, onUpdate }) {
+export default function Exercise({ exercise, dayId, sessionId, isExpanded, isOtherExerciseExpanded, homeMode = false, editMode = false, sessionMode = false, onExpand, onCollapse, onRemove, onUpdate, onSwap, onView, onEditWorkout }) {
   const [isEditingName, setIsEditingName] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
   const [editedName, setEditedName] = useState(exercise.name)
   const [sets, setSets] = useState(exercise.sets)
   const [isStarted, setIsStarted] = useState(exercise.isStarted || false)
@@ -35,16 +38,17 @@ export default function Exercise({ exercise, dayId, sessionId, isExpanded, isOth
   }, [exercise.isStarted])
 
   useEffect(() => {
-    if (isExpanded && isCollapsed) {
+    if ((isExpanded || editMode || isEditing) && isCollapsed) {
       setIsCollapsed(false)
-    } else if (isOtherExerciseExpanded && !isCollapsed) {
+    } else if (isOtherExerciseExpanded && !isCollapsed && !editMode && !isEditing) {
       setIsCollapsed(true)
     }
-  }, [isExpanded, isOtherExerciseExpanded, isCollapsed])
+  }, [isExpanded, isOtherExerciseExpanded, isCollapsed, editMode, isEditing])
 
   const handleCardTap = (event) => {
     event.stopPropagation()
     if (event.target.closest('button, input, textarea, select, a')) return
+    if (editMode || isEditing) return
     setIsCollapsed(previous => {
       const nextCollapsed = !previous
       if (nextCollapsed) {
@@ -177,7 +181,7 @@ export default function Exercise({ exercise, dayId, sessionId, isExpanded, isOth
   }
 
   const isDumbbell = resolvedEquipment.toLowerCase().includes('dumbbell')
-  const weightStep = isDumbbell ? 2 : 2.5
+  const weightStep = getExerciseSettings(exercise).increment ?? (isDumbbell ? 2 : 2.5)
   const quickWeightIncrements = isDumbbell ? [2, 4, 6] : [5, 10, 20]
 
   const handleAddSet = () => {
@@ -211,9 +215,21 @@ export default function Exercise({ exercise, dayId, sessionId, isExpanded, isOth
     navigator.vibrate?.(10)
   }
 
+  const menuItems = [
+    onSwap && { label: 'Swap exercise', icon: ArrowLeftRight, onSelect: () => onSwap(exercise) },
+    { label: 'Edit exercise', icon: Pencil, onSelect: () => setIsEditing(true) },
+    onView && { divider: true },
+    onView && { label: 'View exercise', icon: Dumbbell, onSelect: () => onView(exercise) },
+  ].filter(Boolean)
+  const editing = editMode || isEditing
+  const setGridCols = editing ? 'grid-cols-[2.5rem_1fr_1fr_1fr_5.5rem]' : 'grid-cols-[2.5rem_1fr_1fr_1fr_2.75rem]'
+  const actionMenu = menuItems.length > 0 && (
+    <PopoverMenu items={menuItems} ariaLabel={`Actions for ${exercise.name}`}><Ellipsis size={18} /></PopoverMenu>
+  )
+
   return (
-    <div data-exercise-card className={`exercise-card relative w-full min-w-0 overflow-hidden border-b-2 p-3 text-[var(--ink)] transition-all duration-300 sm:p-4 ${isStarted ? 'border-[var(--accent)] bg-[var(--accent-100)]' : 'border-[var(--hairline)] bg-[var(--bg)]'}`} onClick={handleCardTap}>
-      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div data-exercise-card className={`exercise-card exercise-glass relative w-full min-w-0 overflow-hidden p-4 text-[var(--ink)] transition-all duration-300 ${isStarted ? '!border-[var(--accent)] !bg-[var(--accent-100)]' : ''}`} onClick={handleCardTap}>
+      <div className="flex min-h-12 min-w-0 items-center gap-3">
         {isEditingName ? (
           <input
             type="text"
@@ -222,19 +238,19 @@ export default function Exercise({ exercise, dayId, sessionId, isExpanded, isOth
             onBlur={handleSaveName}
             onKeyDown={handleNameKeyDown}
             autoFocus
-            className="w-full max-w-[280px] border-2 border-[var(--accent)] bg-[var(--surface)] px-3 py-2 text-base font-medium text-[var(--ink)] outline-none"
+            className="min-w-0 flex-1 rounded-xl border-2 border-[var(--accent)] bg-[var(--surface)] px-3 py-2 text-base font-medium text-[var(--ink)] outline-none"
           />
         ) : (
-          <div className="min-w-0 w-full pr-36 text-[var(--ink)] sm:pr-0">
-            <h3 className="min-w-0 max-w-full break-words text-lg font-semibold text-[var(--ink)]">{exercise.name}</h3>
+          <div className="min-w-0 flex-1 text-[var(--ink)]">
+            <h3 className="min-w-0 max-w-full break-words text-lg font-semibold leading-snug text-[var(--ink)]">{exercise.name}</h3>
             {isStarted && <span className="mt-1 inline-block rounded-full bg-[var(--accent-100)] px-2 py-1 text-[0.65rem] font-bold text-[var(--accent)]">In Progress</span>}
           </div>
         )}
 
-        {(sessionMode || editMode) && <div className={sessionMode ? 'absolute right-3 top-3 flex flex-nowrap gap-2 sm:static sm:grid sm:w-auto sm:grid-cols-4' : 'flex w-full flex-nowrap gap-2 sm:ml-auto sm:w-auto sm:grid sm:grid-cols-2'}>
+        <div className="flex shrink-0 items-center gap-2">
           {sessionMode && <button
             type="button"
-            className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-transparent text-sm font-bold text-[var(--ink)] transition-colors hover:bg-[var(--n-300)] sm:flex sm:h-11 sm:w-auto"
+            className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-full bg-transparent text-sm font-bold text-[var(--ink)] transition-colors hover:bg-[var(--n-300)] sm:flex"
             onClick={() => {
               const nextCollapsed = !isCollapsed
               setIsCollapsed(nextCollapsed)
@@ -252,21 +268,21 @@ export default function Exercise({ exercise, dayId, sessionId, isExpanded, isOth
 
           {sessionMode && <button
             type="button"
-            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border-2 text-sm font-bold transition-colors sm:h-11 sm:w-auto ${markForIncrease ? 'border-[var(--accent)] bg-[var(--accent)] text-white' : 'border-[var(--n-500)] bg-transparent text-[var(--n-700)] hover:border-[var(--accent)] hover:text-[var(--accent)]'}`}
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 text-sm font-bold transition-colors ${markForIncrease ? 'border-[var(--accent)] bg-[var(--accent)] text-white' : 'border-[var(--n-500)] bg-transparent text-[var(--n-700)] hover:border-[var(--accent)] hover:text-[var(--accent)]'}`}
             onClick={handleToggleMarkForIncrease}
             title="Mark to increase weight next week"
           >
-            <WeightUp size={18} aria-hidden="true" />
+            <WeightUp size={17} aria-hidden="true" />
           </button>}
 
           {sessionMode && !isStarted && (
             <button
               type="button"
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[var(--accent)] px-2 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--accent-600)] sm:h-11 sm:w-auto sm:px-3"
+              className="flex h-9 shrink-0 items-center justify-center gap-1 rounded-full bg-[var(--accent)] px-3 text-sm font-semibold text-white transition-colors hover:bg-[var(--accent-600)]"
               onClick={handleStartExercise}
               title="Start exercise - will save current week as previous week"
             >
-              <Play className="sm:hidden" size={16} aria-hidden="true" />
+              <Play size={15} aria-hidden="true" />
               <span className="hidden sm:inline">Start</span>
             </button>
           )}
@@ -274,35 +290,26 @@ export default function Exercise({ exercise, dayId, sessionId, isExpanded, isOth
           {sessionMode && isStarted && (
             <button
               type="button"
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[var(--accent)] px-2 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--accent-600)] sm:h-11 sm:w-auto sm:px-3"
+              className="flex h-9 shrink-0 items-center justify-center gap-1 rounded-full bg-[var(--accent)] px-3 text-sm font-semibold text-white transition-colors hover:bg-[var(--accent-600)]"
               onClick={handleCompleteExercise}
               title="Complete exercise - saves current week as previous week and resets"
             >
-              <Square className="sm:hidden" size={15} aria-hidden="true" />
+              <Square size={14} aria-hidden="true" />
               <span className="hidden sm:inline">Complete</span>
             </button>
           )}
 
-          {editMode && <button
-            type="button"
-            className="flex h-11 w-11 shrink-0 items-center justify-center border-2 border-[var(--accent)] bg-transparent px-2 py-2 text-sm font-semibold text-[var(--accent)] transition-colors hover:bg-[var(--accent-100)] sm:h-11 sm:w-auto sm:px-3"
-            onClick={() => setIsEditingName(true)}
-            title="Edit exercise name"
-            aria-label="Edit exercise name"
-          >
-            <Pencil size={15} />
-          </button>}
-
-          {editMode && <button
-            type="button"
-            className="flex h-11 w-11 shrink-0 items-center justify-center border-2 border-[var(--accent)] bg-transparent px-2 py-2 text-sm font-semibold text-[var(--accent)] transition-colors hover:bg-[var(--accent-100)] sm:h-11 sm:w-auto sm:px-3"
-            onClick={onRemove}
-            title="Remove exercise"
-          >
-            <X size={17} aria-hidden="true" />
-          </button>}
-        </div>}
+          {actionMenu}
+        </div>
       </div>
+
+      {editing && (
+        <div className="mt-2 flex flex-wrap items-center gap-2" onClick={event => event.stopPropagation()}>
+          <button type="button" onClick={() => { setEditedName(exercise.name); setIsEditingName(true) }} className="flex h-9 items-center gap-1.5 rounded-full border border-[var(--divider)] px-4 text-xs font-bold"><Pencil size={13} />Edit name</button>
+          <button type="button" onClick={onRemove} className="flex h-9 items-center gap-1.5 rounded-full border border-[var(--accent)] px-4 text-xs font-bold text-[var(--accent)]"><Trash2 size={13} />Remove exercise</button>
+          {isEditing && <button type="button" onClick={() => setIsEditing(false)} className="ml-auto flex h-9 items-center rounded-full bg-[var(--ink)] px-4 text-xs font-bold text-white">Done</button>}
+        </div>
+      )}
 
       {(markForIncrease || prLabel) && !homeMode && (
         <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -313,7 +320,7 @@ export default function Exercise({ exercise, dayId, sessionId, isExpanded, isOth
 
       <div className={`overflow-hidden transition-all duration-300 ${isCollapsed ? 'max-h-0 opacity-0' : 'mt-4 opacity-100'}`}>
         <div className="flex flex-col gap-1 border-y-2 border-[var(--divider)]">
-          <div className="grid min-h-9 grid-cols-[2.5rem_1fr_1fr_1fr_5.5rem] items-center gap-2 border-b-2 border-[var(--divider)] px-1 text-[0.65rem] font-bold uppercase tracking-wide text-[var(--n-600)]">
+          <div className={`grid min-h-9 ${setGridCols} items-center gap-2 border-b-2 border-[var(--divider)] px-1 text-[0.65rem] font-bold uppercase tracking-wide text-[var(--n-600)]`}>
             <span>Set</span>
             <span>Last Session</span>
             <span>Kg</span>
@@ -324,7 +331,7 @@ export default function Exercise({ exercise, dayId, sessionId, isExpanded, isOth
             const isSetComplete = Boolean(set.loggedAt) || completedSetNumbers.has(set.setNumber)
 
             return (
-              <div key={set.setNumber} className={`grid min-h-12 grid-cols-[2.5rem_1fr_1fr_1fr_5.5rem] items-center gap-2 border-b border-[var(--hairline)] px-1 py-1 ${isSetComplete ? 'opacity-45' : ''}`}>
+              <div key={set.setNumber} className={`grid min-h-12 ${setGridCols} items-center gap-2 border-b border-[var(--hairline)] px-1 py-1 ${isSetComplete ? 'opacity-45' : ''}`}>
                 <span className="num text-sm text-[var(--n-700)]">{set.setNumber}</span>
                 <button
                   type="button"
@@ -340,7 +347,7 @@ export default function Exercise({ exercise, dayId, sessionId, isExpanded, isOth
                 <button type="button" onClick={() => setActiveSetEditor({ setNumber: set.setNumber, field: 'currentReps' })} className="min-h-11 border-0 bg-transparent text-left num text-[var(--ink)]">{set.currentReps || 'reps'}</button>
                 <div className="flex items-center gap-1">
                   <button type="button" onClick={() => handleSaveSet(set.setNumber)} className="flex h-10 w-10 items-center justify-center border-2 border-[var(--accent)] bg-[var(--accent-100)] text-[var(--accent)]" aria-label={`Log set ${set.setNumber}`} title="Log set"><Check size={18} /></button>
-                  <button type="button" onClick={() => handleRemoveSet(set.setNumber)} disabled={sets.length <= 1} className="flex h-10 w-10 items-center justify-center border-2 border-[var(--hairline)] text-[var(--n-600)] disabled:opacity-30" aria-label={`Remove set ${set.setNumber}`} title="Remove set"><X size={16} /></button>
+                  {editing && <button type="button" onClick={() => handleRemoveSet(set.setNumber)} disabled={sets.length <= 1} className="flex h-10 w-10 items-center justify-center border-2 border-[var(--hairline)] text-[var(--n-600)] disabled:opacity-30" aria-label={`Remove set ${set.setNumber}`} title="Remove set"><X size={16} /></button>}
                 </div>
               </div>
             )

@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { Check, Plus } from 'lucide-react'
 
-export default function ExerciseRow({ exercise, addedDayName, onAdd }) {
+export default function ExerciseRow({ exercise, addedDayName, onAdd, onView }) {
   const added = Boolean(addedDayName)
   return (
     <div className="grid grid-cols-[1fr_auto_auto] items-center gap-2 border-b-2 border-[var(--divider)] py-3">
@@ -11,7 +11,9 @@ export default function ExerciseRow({ exercise, addedDayName, onAdd }) {
         <strong className={`block text-[15px] font-bold ${added ? 'text-[var(--n-600)]' : 'text-[var(--ink)]'}`}>{exercise.name}</strong>
         <span className="text-xs text-[var(--n-600)]">{added ? `In ${addedDayName}` : `${exercise.bodyPart} · ${exercise.movement} · ${exercise.equipment}`}</span>
       </div>
-      <Link href={`/library/exercise/${exercise.id}`} className="flex min-h-11 items-center border-2 border-[var(--divider)] px-3 text-xs font-bold tracking-wide">DETAILS</Link>
+      {onView
+        ? <button type="button" onClick={() => onView(exercise)} className="flex min-h-11 items-center rounded-full border-2 border-[var(--divider)] px-4 text-xs font-bold tracking-wide">DETAILS</button>
+        : <Link href={`/library/exercise/${exercise.id}`} className="flex min-h-11 items-center rounded-full border-2 border-[var(--divider)] px-4 text-xs font-bold tracking-wide">DETAILS</Link>}
       <button
         type="button"
         onClick={() => !added && onAdd(exercise)}

@@ -5,11 +5,12 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/authContext'
 import { useWorkoutSession } from '@/lib/workoutSessionContext'
 import { getWorkoutDays, saveWorkoutDays, saveWorkoutLog } from '@/lib/firebaseQueries'
-import AppNav from '@/components/AppNav'
 import WorkoutDay from '@/components/WorkoutDay'
 import WorkoutTimer from '@/components/WorkoutTimer'
 import AddExerciseSheet from '@/components/library/AddExerciseSheet'
-import { Pencil } from 'lucide-react'
+import { Ellipsis, Pencil, Plus } from 'lucide-react'
+import { useNavTitle } from '@/components/NavShell'
+import PopoverMenu from '@/components/PopoverMenu'
 
 export default function SessionPage() {
   const { user, loading: authLoading } = useAuth()
@@ -38,6 +39,7 @@ export default function SessionPage() {
   }, [days, loading, user])
 
   const activeDay = days.find(day => day.isStarted || day.id === session?.dayId)
+  useNavTitle(activeDay?.name)
 
   const handleDayNameChange = (id, newName) => {
     setDays(previous => previous.map(day => day.id === id ? { ...day, name: newName } : day))
@@ -68,6 +70,12 @@ export default function SessionPage() {
     ))
   }
 
+  const reorderExercises = (dayId, fromId, toId) => setDays(previous => previous.map(day => { if (day.id !== dayId) return day; const from = day.exercises.findIndex(ex => String(ex.id) === String(fromId)); const to = day.exercises.findIndex(ex => String(ex.id) === String(toId)); if (from < 0 || to < 0 || from === to) return day; const exercises = [...day.exercises]; const [moved] = exercises.splice(from, 1); exercises.splice(to, 0, moved); return { ...day, exercises } }))
+
+  const removeExercise = (dayId, exerciseId) => {
+    setDays(previous => previous.map(day => day.id === dayId ? { ...day, exercises: day.exercises.filter(exercise => exercise.id !== exerciseId) } : day))
+  }
+
   const handleEndSession = async () => {
     if (!activeDay || !session?.startedAt) {
       router.push('/')
@@ -80,6 +88,7 @@ export default function SessionPage() {
       .map(exercise => ({
         id: exercise.id,
         name: exercise.name,
+        libraryId: exercise.libraryId || null,
         completedAt: exercise.completedAt || finalSession.endedAt,
         sets: exercise.sets
           .filter(set => set.loggedSessionId === activeSessionId && set.currentWeight !== '' && set.currentReps !== '')
@@ -110,7 +119,6 @@ export default function SessionPage() {
 
   return (
     <>
-      <AppNav title={activeDay.name} />
       <main className="p-0">
         <header className="sticky top-0 z-30 border-b-2 border-[var(--accent)] bg-[var(--surface)]">
           <div className="flex items-center gap-3 px-5 py-3">
@@ -129,18 +137,7 @@ export default function SessionPage() {
               ) : (
                 <div className="session-day-name flex min-w-0 items-center gap-2">
                   <h1 className="truncate text-xl">{activeDay.name}</h1>
-                  <button
-                    type="button"
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-slate-300 bg-slate-100 text-xs text-slate-600 transition-colors hover:border-slate-500 hover:text-slate-900"
-                    onClick={() => {
-                      setEditedName(activeDay.name)
-                      setIsEditingName(true)
-                    }}
-                    title="Edit day name"
-                    aria-label="Edit day name"
-                  >
-                    <Pencil size={14} />
-                  </button>
+                  <PopoverMenu ariaLabel="Workout options" items={[{ label: 'Rename workout', icon: Pencil, onSelect: () => { setEditedName(activeDay.name); setIsEditingName(true) } }, { label: 'Add exercise', icon: Plus, onSelect: () => setAddExerciseOpen(true) }]}><Ellipsis size={18} /></PopoverMenu>
                 </div>
               )}
             </div>
@@ -155,7 +152,7 @@ export default function SessionPage() {
           onToggleDayStart={(_, started) => { if (!started) handleEndSession() }}
           onRemoveDay={() => {}}
           onAddExercise={() => setAddExerciseOpen(true)}
-          onRemoveExercise={() => {}}
+          onRemoveExercise={removeExercise} onReorderExercises={reorderExercises}
           onUpdateExercise={(dayId, exerciseId, updated) => updateExercise(dayId, exerciseId, updated)}
           sessionMode
           sessionId={session.sessionId ?? session.startedAt}

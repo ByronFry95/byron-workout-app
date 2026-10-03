@@ -7,9 +7,9 @@ import { useAuth } from '@/lib/authContext'
 import { useWorkoutSession } from '@/lib/workoutSessionContext'
 import { getWorkoutDays, saveWorkoutDays, addExercisesToDay, createWorkoutDay } from '@/lib/firebaseQueries'
 import { exercises, routines, filterExercises, buildWorkoutExerciseEntry } from '@/lib/exerciseLibrary'
-import AppNav from '@/components/AppNav'
 import Segmented from '@/components/Segmented'
 import ExerciseRow from '@/components/library/ExerciseRow'
+import ExerciseDetailSheet from '@/components/ExerciseDetailSheet'
 import RoutineRow from '@/components/library/RoutineRow'
 import LibraryFilterSheet from '@/components/library/LibraryFilterSheet'
 import AddToSessionSheet from '@/components/library/AddToSessionSheet'
@@ -34,6 +34,7 @@ export default function LibraryPage() {
 
   const [addSheet, setAddSheet] = useState({ open: false, type: null, item: null })
   const [toast, setToast] = useState(null)
+  const [detailExercise, setDetailExercise] = useState(null)
 
   useEffect(() => {
     if (authLoading) return
@@ -96,7 +97,6 @@ export default function LibraryPage() {
 
   return (
     <>
-      <AppNav />
       <main>
         <h1 className="mb-6 text-3xl text-[var(--ink)]">Exercise Library</h1>
         {loadError && <p className="mb-4 text-sm text-[var(--accent-700)]">{loadError}</p>}
@@ -129,7 +129,7 @@ export default function LibraryPage() {
             <div className="border-y border-[var(--hairline)] py-6"><p className="font-bold">No exercises match</p><p className="mt-1 text-sm text-[var(--n-600)]">Try clearing your filters or search.</p></div>
           ) : (
             <div className="border-t-2 border-[var(--divider)]">
-              {renderedExercises.map(exercise => <ExerciseRow key={exercise.id} exercise={exercise} addedDayName={findDayForLibraryId(exercise.id)?.name} onAdd={handleAddExerciseClick} />)}
+              {renderedExercises.map(exercise => <ExerciseRow key={exercise.id} exercise={exercise} addedDayName={findDayForLibraryId(exercise.id)?.name} onAdd={handleAddExerciseClick} onView={setDetailExercise} />)}
             </div>
           )
         ) : (
@@ -144,6 +144,7 @@ export default function LibraryPage() {
       </main>
 
       <LibraryFilterSheet open={filterSheetOpen} onClose={() => setFilterSheetOpen(false)} filters={filters} search={search} onApply={setFilters} />
+      <ExerciseDetailSheet open={Boolean(detailExercise)} onClose={() => setDetailExercise(null)} exercise={detailExercise} />
 
       <AddToSessionSheet
         open={addSheet.open}

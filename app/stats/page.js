@@ -6,7 +6,6 @@ import { useAuth } from '@/lib/authContext'
 import { getMetricsHistory, getWorkoutDays, getWorkoutLogs } from '@/lib/firebaseQueries'
 import { CHART_PALETTE, TIMEFRAMES, filterPointsByTimeframe, resolveExerciseColors } from '@/lib/chartUtils'
 import TrendLineChart from '@/components/TrendLineChart'
-import AppNav from '@/components/AppNav'
 import { X } from 'lucide-react'
 import StatTiles from '@/components/StatTiles'
 import Segmented from '@/components/Segmented'
@@ -158,7 +157,6 @@ export default function StatsPage() {
 
   return (
     <>
-      <AppNav />
 
       <main>
         <h1 className="mb-4 text-3xl font-bold text-slate-800">Stats</h1>

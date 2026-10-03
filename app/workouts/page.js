@@ -6,8 +6,8 @@ import { useAuth } from '@/lib/authContext'
 import { getWorkoutDays, getWorkoutLogs, saveWorkoutDays, saveWorkoutLog } from '@/lib/firebaseQueries'
 import { useWorkoutSession } from '@/lib/workoutSessionContext'
 import WorkoutDay from '@/components/WorkoutDay'
-import AppNav from '@/components/AppNav'
 import AddExerciseSheet from '@/components/library/AddExerciseSheet'
+import ProgramsSheet from '@/components/ProgramsSheet'
 import { Plus } from 'lucide-react'
 
 export default function WorkoutsPage() {
@@ -19,6 +19,7 @@ export default function WorkoutsPage() {
   const [loadError, setLoadError] = useState('')
   const [workoutLogs, setWorkoutLogs] = useState([])
   const [addExerciseDayId, setAddExerciseDayId] = useState(null)
+  const [programsOpen, setProgramsOpen] = useState(false)
 
   useEffect(() => {
     if (authLoading) return
@@ -96,6 +97,7 @@ export default function WorkoutsPage() {
 
   const handleAddExercise = (dayId) => setAddExerciseDayId(dayId)
   const handleConfirmAddExercise = (entry) => setDays(previous => previous.map(day => day.id === addExerciseDayId ? { ...day, exercises: [...day.exercises, entry] } : day))
+  const reorderExercises = (dayId, fromId, toId) => setDays(previous => previous.map(day => { if (day.id !== dayId) return day; const from = day.exercises.findIndex(ex => String(ex.id) === String(fromId)); const to = day.exercises.findIndex(ex => String(ex.id) === String(toId)); if (from < 0 || to < 0 || from === to) return day; const exercises = [...day.exercises]; const [moved] = exercises.splice(from, 1); exercises.splice(to, 0, moved); return { ...day, exercises } }))
   const handleRemoveExercise = (dayId, exerciseId) => setDays(days.map(day => day.id === dayId ? { ...day, exercises: day.exercises.filter(ex => ex.id !== exerciseId) } : day))
   const handleUpdateExercise = (dayId, exerciseId, updatedExercise) => setDays(days.map(day => day.id === dayId ? { ...day, exercises: day.exercises.map(ex => ex.id === exerciseId ? updatedExercise : ex) } : day))
 
@@ -110,7 +112,7 @@ export default function WorkoutsPage() {
       const finalSession = await endSession()
       if (!finalSession) return
       const activeSessionId = finalSession.sessionId ?? finalSession.startedAt
-      const loggedExercises = (activeDay?.exercises || []).map(exercise => ({ id: exercise.id, name: exercise.name, completedAt: exercise.completedAt || finalSession.endedAt, sets: exercise.sets.filter(set => set.loggedSessionId === activeSessionId && set.currentWeight !== '' && set.currentReps !== '').map(set => ({ setNumber: set.setNumber, weight: set.currentWeight, reps: set.currentReps, loggedAt: set.loggedAt })) })).filter(exercise => exercise.sets.length > 0)
+      const loggedExercises = (activeDay?.exercises || []).map(exercise => ({ id: exercise.id, name: exercise.name, libraryId: exercise.libraryId || null, completedAt: exercise.completedAt || finalSession.endedAt, sets: exercise.sets.filter(set => set.loggedSessionId === activeSessionId && set.currentWeight !== '' && set.currentReps !== '').map(set => ({ setNumber: set.setNumber, weight: set.currentWeight, reps: set.currentReps, loggedAt: set.loggedAt })) })).filter(exercise => exercise.sets.length > 0)
       await saveWorkoutLog(user.uid, { dayId: activeDay?.id, dayName: activeDay?.name || 'Workout Day', startedAt: finalSession.startedAt, endedAt: finalSession.endedAt, durationMs: finalSession.durationMs, sessionId: activeSessionId, exercises: loggedExercises })
     } catch (error) { console.error('Failed to save workout session or log:', error) }
   }
@@ -125,5 +127,5 @@ export default function WorkoutsPage() {
   if (!user) return null
   if (loadError) return <div className="min-h-screen bg-page px-5 py-10 text-center font-dark">Firebase error: {loadError}</div>
 
-  return <><AppNav /><main><h1 className="mb-8 text-3xl text-[var(--ink)]">Workout Tracker</h1><div className="flex flex-col gap-5">{visibleDays.map(day => <WorkoutDay key={day.id} day={day} onDayNameChange={handleDayNameChange} onToggleCollapse={handleToggleDayCollapse} onToggleDayStart={handleToggleDayStart} onRemoveDay={handleRemoveDay} onAddExercise={handleAddExercise} onRemoveExercise={handleRemoveExercise} onUpdateExercise={handleUpdateExercise} homeMode lastCompletedAt={getLastCompletedDate(day.id)} />)}</div><button type="button" onClick={handleAddDay} className="mt-6 w-full border-2 border-dashed border-[var(--divider)] bg-transparent p-3 text-left font-bold"><span className="flex items-center gap-2"><Plus size={17} />Add Day</span></button></main><AddExerciseSheet open={Boolean(addExerciseDayId)} onClose={() => setAddExerciseDayId(null)} dayName={days.find(day => day.id === addExerciseDayId)?.name} onAdd={handleConfirmAddExercise} /></>
+  return <><main><h1 className="mb-8 text-3xl text-[var(--ink)]">Workout Tracker</h1><div className="flex flex-col gap-5">{visibleDays.map(day => <WorkoutDay key={day.id} day={day} onDayNameChange={handleDayNameChange} onToggleCollapse={handleToggleDayCollapse} onToggleDayStart={handleToggleDayStart} onRemoveDay={handleRemoveDay} onAddExercise={handleAddExercise} onRemoveExercise={handleRemoveExercise} onReorderExercises={reorderExercises} onUpdateExercise={handleUpdateExercise} onAddDay={handleAddDay} onViewPrograms={() => setProgramsOpen(true)} homeMode lastCompletedAt={getLastCompletedDate(day.id)} />)}</div><button type="button" onClick={handleAddDay} className="mt-6 w-full border-2 border-dashed border-[var(--divider)] bg-transparent p-3 text-left font-bold"><span className="flex items-center gap-2"><Plus size={17} />Add Day</span></button></main><AddExerciseSheet open={Boolean(addExerciseDayId)} onClose={() => setAddExerciseDayId(null)} dayName={days.find(day => day.id === addExerciseDayId)?.name} onAdd={handleConfirmAddExercise} /><ProgramsSheet open={programsOpen} onClose={() => setProgramsOpen(false)} days={days} /></>
 }

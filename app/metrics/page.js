@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/authContext'
 import { getMetricsHistory, saveMetrics, deleteMetricsEntry } from '@/lib/firebaseQueries'
 import { calculateBodyFatNavy, getBodyFatCategory } from '@/lib/bodyFatCalculator'
-import AppNav from '@/components/AppNav'
 import StatTiles from '@/components/StatTiles'
 import Sheet from '@/components/Sheet'
 import { ChevronDown, Trash2 } from 'lucide-react'
@@ -64,7 +63,6 @@ export default function MetricsPage() {
 
   return (
     <>
-      <AppNav />
       <main>
         <h1 className="mb-6 text-3xl text-[var(--ink)]">Body Metrics</h1>
         {loadError && <p className="mb-4 text-sm text-[var(--accent-700)]">{loadError}</p>}
