@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useId, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 
 // Open sheets register here so the browser/OS back gesture only closes the top-most one.
@@ -92,9 +93,11 @@ export default function Sheet({ open, onClose, title, children, className = '', 
 
   const dragHandlers = { onPointerDown: handleDragStart, onPointerMove: handleDragMove, onPointerUp: handleDragEnd, onPointerCancel: handleDragEnd }
 
+  const portal = node => (typeof document === 'undefined' ? null : createPortal(node, document.body))
+
   if (fullScreen) {
-    return (
-      <div className="fixed inset-0 z-50 bg-[var(--surface)]" onClick={onClose}>
+    return portal(
+      <div className="fixed inset-0 z-50 bg-[var(--surface)]" onClick={onClose} onPointerDown={event => event.stopPropagation()}>
         <div
           role="dialog"
           aria-modal="true"
@@ -111,8 +114,8 @@ export default function Sheet({ open, onClose, title, children, className = '', 
     )
   }
 
-  return (
-    <div className="glass-backdrop fixed inset-0 z-50 flex items-end sm:items-center sm:justify-center" onClick={onClose}>
+  return portal(
+    <div className="glass-backdrop fixed inset-0 z-50 flex items-end sm:items-center sm:justify-center" onClick={onClose} onPointerDown={event => event.stopPropagation()}>
       <div
         ref={panelRef}
         role="dialog"

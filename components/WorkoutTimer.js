@@ -15,7 +15,7 @@ const formatDuration = (ms) => {
   return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
 }
 
-export default function WorkoutTimer({ session, onStartDay, onEndDay, sticky = false, showEndButton = true }) {
+export default function WorkoutTimer({ session, onStartDay, onEndDay, sticky = false, showEndButton = true, compact = false }) {
   const [elapsedMs, setElapsedMs] = useState(0)
 
   useEffect(() => {
@@ -59,6 +59,8 @@ export default function WorkoutTimer({ session, onStartDay, onEndDay, sticky = f
       wakeLock?.release()
     }
   }, [isRunning])
+
+  if (compact) return <span className="num">{formatDuration(elapsedMs)}</span>
 
   return (
     <div className={`bg-ink p-4 text-white ${sticky ? 'sticky top-0 z-30 mb-0 border-b-2 border-[var(--accent)]' : `mb-6 ${isRunning ? 'fixed bottom-[4.75rem] left-3 right-3 z-30 mb-0 sm:static sm:mb-6' : ''}`}`}>

@@ -4,14 +4,19 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Exercise from './Exercise'
 import ReorderItem from './ReorderItem'
+import SupersetCard from './SupersetCard'
+import NoteSheet from './NoteSheet'
+import { completeExerciseState, startExerciseState } from '@/lib/sessionMath'
 import PopoverMenu from './PopoverMenu'
+import Sheet from './Sheet'
 import SwapExerciseSheet from './SwapExerciseSheet'
 import ExerciseDetailSheet from './ExerciseDetailSheet'
-import { ChevronDown, ChevronUp, Ellipsis, Layers, LayersPlus, ListChecks, Pencil, Plus, Trash2, X } from 'lucide-react'
+import { ChevronDown, ChevronUp, Ellipsis, Layers, LayersPlus, ListChecks, Pencil, Plus, StickyNote, Trash2, X } from 'lucide-react'
 
 export default function WorkoutDay({
   day,
   onDayNameChange,
+  onDayNoteChange,
   onToggleCollapse,
   onToggleDayStart,
   onRemoveDay,
@@ -19,6 +24,7 @@ export default function WorkoutDay({
   onRemoveExercise,
   onUpdateExercise,
   onReorderExercises,
+  onSetExercises,
   onAddDay,
   onViewPrograms,
   programCount = 1,
@@ -35,6 +41,8 @@ export default function WorkoutDay({
   const [isDragging, setIsDragging] = useState(false)
   const [swapTarget, setSwapTarget] = useState(null)
   const [viewTarget, setViewTarget] = useState(null)
+  const [supersetTarget, setSupersetTarget] = useState(null)
+  const [dayNoteOpen, setDayNoteOpen] = useState(false)
   const router = useRouter()
   const [draggingId, setDraggingId] = useState(null)
   const cardRef = useRef(null)
@@ -163,6 +171,73 @@ export default function WorkoutDay({
     onUpdateExercise(day.id, target.id, { ...target, name: chosen.name, equipment: chosen.equipment || '', libraryId: libraryId || null, sets: freshSets })
   }
 
+  const groupedExercises = day.exercises.reduce((groups, exercise) => {
+    const last = groups[groups.length - 1]
+    if (last && exercise.supersetId && last[0].supersetId === exercise.supersetId) last.push(exercise)
+    else groups.push([exercise])
+    return groups
+  }, [])
+
+  const updateExercises = updater => onSetExercises?.(day.id, updater)
+
+  const handleStartGroup = group => {
+    const ids = new Set(group.map(exercise => exercise.id))
+    updateExercises(list => list.map(exercise => ids.has(exercise.id) ? startExerciseState(exercise, exercise.unilateral === true) : exercise))
+  }
+
+  const handleFinishGroup = group => {
+    const ids = new Set(group.map(exercise => exercise.id))
+    updateExercises(list => list.map(exercise => ids.has(exercise.id) ? completeExerciseState(exercise) : exercise))
+  }
+
+  const handlePickSuperset = partner => {
+    const target = supersetTarget
+    setSupersetTarget(null)
+    if (!target) return
+    const supersetId = target.supersetId || `ss-${Date.now()}`
+    updateExercises(list => {
+      const without = list.filter(exercise => exercise.id !== partner.id)
+      const targetIndex = without.findIndex(exercise => exercise.id === target.id)
+      const joined = { ...partner, supersetId }
+      const next = [...without]
+      next.splice(targetIndex + 1, 0, joined)
+      return next.map(exercise => exercise.id === target.id ? { ...exercise, supersetId } : exercise)
+    })
+  }
+
+  const handleUnsuperset = exercise => {
+    updateExercises(list => {
+      const remaining = list.filter(item => item.supersetId === exercise.supersetId && item.id !== exercise.id)
+      return list.map(item => {
+        if (item.id === exercise.id) return { ...item, supersetId: null }
+        if (remaining.length === 1 && item.id === remaining[0].id) return { ...item, supersetId: null }
+        return item
+      })
+    })
+  }
+
+  const renderExercise = (exercise, extra = {}) => (
+    <Exercise
+      key={`${exercise.id}-${exercise.libraryId || exercise.name}`}
+      exercise={exercise}
+      onSwap={setSwapTarget}
+      onView={setViewTarget}
+      onSuperset={sessionMode && day.exercises.length > 1 ? setSupersetTarget : undefined}
+      onUnsuperset={handleUnsuperset}
+      dayId={day.id}
+      sessionId={sessionId}
+      isExpanded={expandedExerciseId === exercise.id}
+      isOtherExerciseExpanded={expandedExerciseId !== null && expandedExerciseId !== exercise.id}
+      onExpand={handleExerciseExpand}
+      onCollapse={handleExerciseCollapse}
+      onRemove={() => onRemoveExercise(day.id, exercise.id)}
+      onUpdate={updated => onUpdateExercise(day.id, exercise.id, updated)}
+      homeMode={homeMode}
+      editMode={isEditingExercises}
+      sessionMode={sessionMode}
+      {...extra}
+    />
+  )
   const workoutMenuItems = [
     onViewPrograms && { section: 'Program' },
     onViewPrograms && { label: 'View Programs', sub: `${programCount} program${programCount === 1 ? '' : 's'}`, icon: Layers, onSelect: onViewPrograms },
@@ -170,6 +245,7 @@ export default function WorkoutDay({
     { divider: true },
     { section: "Today's workout" },
     { label: 'Rename Workout', icon: Pencil, onSelect: () => { setEditedName(day.name); setIsEditingName(true) } },
+    { label: day.note ? 'Edit note' : 'Add note', icon: StickyNote, onSelect: () => setDayNoteOpen(true) },
     { label: 'Edit Workout', icon: ListChecks, onSelect: () => setIsEditingExercises(true) },
     onAddDay && { label: 'Blank Workout', icon: Plus, onSelect: onAddDay },
   ].filter(Boolean)
@@ -279,6 +355,7 @@ export default function WorkoutDay({
 
               </div>
             )}
+            {day.note && <button type="button" onClick={() => setDayNoteOpen(true)} className="mt-3 flex w-full items-start gap-2 rounded-xl border-0 bg-amber-400/15 px-3 py-2 text-left text-xs text-[var(--ink)]"><StickyNote size={14} className="mt-0.5 shrink-0 text-amber-600" /><span className="min-w-0 whitespace-pre-wrap break-words">{day.note}</span></button>}
             <div className="mt-3 flex flex-wrap gap-5 border-y border-[var(--hairline)] py-2 text-xs font-bold uppercase tracking-wide text-[var(--n-600)]">
               <span>{exerciseCount} exercises</span><span>{setCount} sets</span><span>Last done {lastCompletedLabel}</span>
             </div>
@@ -310,29 +387,20 @@ export default function WorkoutDay({
                 <button type="button" onClick={() => onAddExercise(day.id)} className="mt-4 min-h-11 bg-[var(--accent)] px-4 text-sm font-bold text-white">ADD YOUR FIRST EXERCISE</button>
               </div>
             ) : (
-              day.exercises.map(exercise => (
-                <ReorderItem key={exercise.id} id={exercise.id} dragging={draggingId === exercise.id} onDragStart={setDraggingId} onDragOver={(from, to) => onReorderExercises?.(day.id, from, to)} onDragEnd={() => setDraggingId(null)}>
-                <Exercise
-                  key={`${exercise.id}-${exercise.libraryId || exercise.name}`}
-                  exercise={exercise}
-                  onSwap={setSwapTarget}
-                  onView={setViewTarget}
-                  
-                  dayId={day.id}
-                  sessionId={sessionId}
-                  isExpanded={expandedExerciseId === exercise.id}
-                  isOtherExerciseExpanded={expandedExerciseId !== null && expandedExerciseId !== exercise.id}
-                  onExpand={handleExerciseExpand}
-                  onCollapse={handleExerciseCollapse}
-                  onRemove={() => onRemoveExercise(day.id, exercise.id)}
-                  onUpdate={(updated) => onUpdateExercise(day.id, exercise.id, updated)}
-                  homeMode={homeMode}
-                  editMode={isEditingExercises}
+              groupedExercises.map(group => group.length > 1 && group[0].supersetId ? (
+                <SupersetCard
+                  key={`ss-${group[0].supersetId}`}
+                  group={group}
                   sessionMode={sessionMode}
+                  onStartAll={handleStartGroup}
+                  onFinishAll={handleFinishGroup}
+                  renderExercise={renderExercise}
                 />
+              ) : (
+                <ReorderItem key={group[0].id} id={group[0].id} dragging={draggingId === group[0].id} onDragStart={setDraggingId} onDragOver={(from, to) => onReorderExercises?.(day.id, from, to)} onDragEnd={() => setDraggingId(null)}>
+                  {renderExercise(group[0])}
                 </ReorderItem>
-              ))
-            )}
+              ))            )}
           </div>
         </div>
 
@@ -358,7 +426,22 @@ export default function WorkoutDay({
       </div>
 
       <SwapExerciseSheet open={Boolean(swapTarget)} onClose={() => setSwapTarget(null)} exercise={swapTarget} dayName={day.name} onSwap={handleSwapExercise} />
-      <ExerciseDetailSheet open={Boolean(viewTarget)} onClose={() => setViewTarget(null)} exercise={viewTarget} />
+      <NoteSheet open={dayNoteOpen} onClose={() => setDayNoteOpen(false)} title={`Note · ${day.name}`} value={day.note || ''} onSave={note => onDayNoteChange?.(day.id, note)} />
+      <Sheet open={Boolean(supersetTarget)} onClose={() => setSupersetTarget(null)} title="Create super set">
+        {supersetTarget && (
+          <div className="pb-6">
+            <p className="mb-3 text-sm text-[var(--n-600)]">Choose an exercise to pair with <span className="font-bold text-[var(--ink)]">{supersetTarget.name}</span>.</p>
+            <div className="glass-card overflow-hidden">
+              {day.exercises.filter(exercise => exercise.id !== supersetTarget.id && !exercise.supersetId).map(exercise => (
+                <button key={exercise.id} type="button" onClick={() => handlePickSuperset(exercise)} className="glass-row flex min-h-14 w-full items-center justify-between gap-3 border-0 bg-transparent px-4 text-left text-base font-semibold">
+                  <span className="min-w-0">{exercise.name}</span><span className="h-6 w-6 shrink-0 rounded-full border-2 border-[var(--n-500)]" aria-hidden="true" />
+                </button>
+              ))}
+              {day.exercises.filter(exercise => exercise.id !== supersetTarget.id && !exercise.supersetId).length === 0 && <p className="px-4 py-5 text-sm text-[var(--n-600)]">No other exercises available. Add one to the workout first.</p>}
+            </div>
+          </div>
+        )}
+      </Sheet>      <ExerciseDetailSheet open={Boolean(viewTarget)} onClose={() => setViewTarget(null)} exercise={viewTarget} />
 
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-end bg-black/40 sm:items-center" onClick={() => setShowDeleteModal(false)}>
