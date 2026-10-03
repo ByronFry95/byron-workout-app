@@ -245,6 +245,11 @@ main {
     box-shadow: 0 10px 32px rgba(32, 30, 29, 0.22), inset 0 1px 0 #ffffff;
     backdrop-filter: blur(22px) saturate(170%);
     -webkit-backdrop-filter: blur(22px) saturate(170%);
+    /* Own compositing layer keeps the bar pinned to the bottom while mobile browser chrome collapses mid-scroll. */
+    transform: translate3d(0, 0, 0);
+    -webkit-transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    will-change: transform;
   }
 }
 

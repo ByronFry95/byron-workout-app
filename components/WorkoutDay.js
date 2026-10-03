@@ -42,6 +42,7 @@ export default function WorkoutDay({
   const [swapTarget, setSwapTarget] = useState(null)
   const [viewTarget, setViewTarget] = useState(null)
   const [supersetTarget, setSupersetTarget] = useState(null)
+  const [supersetMode, setSupersetMode] = useState('create')
   const [dayNoteOpen, setDayNoteOpen] = useState(false)
   const router = useRouter()
   const [draggingId, setDraggingId] = useState(null)
@@ -192,8 +193,20 @@ export default function WorkoutDay({
 
   const handlePickSuperset = partner => {
     const target = supersetTarget
+    const replacing = supersetMode === 'replace'
     setSupersetTarget(null)
     if (!target) return
+    if (replacing) {
+      const supersetId = target.supersetId
+      updateExercises(list => {
+        const without = list.filter(exercise => exercise.id !== partner.id)
+        const targetIndex = without.findIndex(exercise => exercise.id === target.id)
+        const next = without.map(exercise => exercise.id === target.id ? { ...exercise, supersetId: null } : exercise)
+        next.splice(targetIndex, 0, { ...partner, supersetId })
+        return next
+      })
+      return
+    }
     const supersetId = target.supersetId || `ss-${Date.now()}`
     updateExercises(list => {
       const without = list.filter(exercise => exercise.id !== partner.id)
@@ -216,13 +229,19 @@ export default function WorkoutDay({
     })
   }
 
+  const handleUnlinkGroup = group => {
+    const ids = new Set(group.map(exercise => exercise.id))
+    updateExercises(list => list.map(exercise => ids.has(exercise.id) ? { ...exercise, supersetId: null } : exercise))
+  }
+
   const renderExercise = (exercise, extra = {}) => (
     <Exercise
       key={`${exercise.id}-${exercise.libraryId || exercise.name}`}
       exercise={exercise}
       onSwap={setSwapTarget}
       onView={setViewTarget}
-      onSuperset={sessionMode && day.exercises.length > 1 ? setSupersetTarget : undefined}
+      onSuperset={sessionMode && day.exercises.length > 1 ? exercise => { setSupersetMode('create'); setSupersetTarget(exercise) } : undefined}
+      onChangeSuperset={exercise => { setSupersetMode('replace'); setSupersetTarget(exercise) }}
       onUnsuperset={handleUnsuperset}
       dayId={day.id}
       sessionId={sessionId}
@@ -394,6 +413,7 @@ export default function WorkoutDay({
                   sessionMode={sessionMode}
                   onStartAll={handleStartGroup}
                   onFinishAll={handleFinishGroup}
+                  onUnlink={handleUnlinkGroup}
                   renderExercise={renderExercise}
                 />
               ) : (
@@ -427,10 +447,10 @@ export default function WorkoutDay({
 
       <SwapExerciseSheet open={Boolean(swapTarget)} onClose={() => setSwapTarget(null)} exercise={swapTarget} dayName={day.name} onSwap={handleSwapExercise} />
       <NoteSheet open={dayNoteOpen} onClose={() => setDayNoteOpen(false)} title={`Note · ${day.name}`} value={day.note || ''} onSave={note => onDayNoteChange?.(day.id, note)} />
-      <Sheet open={Boolean(supersetTarget)} onClose={() => setSupersetTarget(null)} title="Create super set">
+      <Sheet open={Boolean(supersetTarget)} onClose={() => setSupersetTarget(null)} title={supersetMode === 'replace' ? 'Change partner' : 'Create super set'}>
         {supersetTarget && (
           <div className="pb-6">
-            <p className="mb-3 text-sm text-[var(--n-600)]">Choose an exercise to pair with <span className="font-bold text-[var(--ink)]">{supersetTarget.name}</span>.</p>
+            <p className="mb-3 text-sm text-[var(--n-600)]">{supersetMode === 'replace' ? <>Choose an exercise to take the place of <span className="font-bold text-[var(--ink)]">{supersetTarget.name}</span> in the super set.</> : <>Choose an exercise to pair with <span className="font-bold text-[var(--ink)]">{supersetTarget.name}</span>.</>}</p>
             <div className="glass-card overflow-hidden">
               {day.exercises.filter(exercise => exercise.id !== supersetTarget.id && !exercise.supersetId).map(exercise => (
                 <button key={exercise.id} type="button" onClick={() => handlePickSuperset(exercise)} className="glass-row flex min-h-14 w-full items-center justify-between gap-3 border-0 bg-transparent px-4 text-left text-base font-semibold">

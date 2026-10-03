@@ -8,7 +8,8 @@ export default function ViewportManager() {
     if (!viewport) return undefined
 
     const updateViewport = () => {
-      const keyboardHeight = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop)
+      const editing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '')
+      const keyboardHeight = editing ? Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop) : 0
       document.documentElement.style.setProperty('--keyboard-height', `${keyboardHeight}px`)
     }
 

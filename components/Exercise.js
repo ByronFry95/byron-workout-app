@@ -23,7 +23,7 @@ const withRightDefaults = set => ({
 export default function Exercise({
   exercise, dayId, sessionId, isExpanded, isOtherExerciseExpanded,
   homeMode = false, editMode = false, sessionMode = false, embedded = false, badge = null,
-  onExpand, onCollapse, onRemove, onUpdate, onSwap, onView, onSuperset, onUnsuperset, onSetLogged,
+  onExpand, onCollapse, onRemove, onUpdate, onSwap, onView, onSuperset, onChangeSuperset, onUnsuperset, onSetLogged,
 }) {
   const [isEditingName, setIsEditingName] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
@@ -218,7 +218,8 @@ export default function Exercise({
   const menuItems = [
     { label: exercise.note ? 'Edit note' : 'Add note', icon: StickyNote, onSelect: openNote },
     sessionMode && onSuperset && !exercise.supersetId && { label: 'Create super set', icon: Link2, onSelect: () => onSuperset(exercise) },
-    sessionMode && exercise.supersetId && onUnsuperset && { label: 'Remove from super set', icon: Link2, onSelect: () => onUnsuperset(exercise) },
+    exercise.supersetId && onChangeSuperset && { label: 'Change super set partner', icon: ArrowLeftRight, onSelect: () => onChangeSuperset(exercise) },
+    exercise.supersetId && onUnsuperset && { label: 'Remove from super set', icon: Link2, onSelect: () => onUnsuperset(exercise) },
     { divider: true },
     onSwap && { label: 'Swap exercise', icon: ArrowLeftRight, onSelect: () => onSwap(exercise) },
     { label: 'Edit exercise', icon: Pencil, onSelect: () => setIsEditing(true) },
