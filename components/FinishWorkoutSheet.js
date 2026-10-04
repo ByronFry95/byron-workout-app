@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Clock, Dumbbell, Flame, Layers } from 'lucide-react'
 import Sheet from './Sheet'
+import { cardioDerived, formatCardioSummary } from '@/lib/cardio'
 
 const formatDuration = ms => {
   const minutes = Math.max(0, Math.round(ms / 60000))
@@ -47,7 +48,12 @@ export default function FinishWorkoutSheet({ open, onClose, onFinish, summary, s
           {summary.topMuscle && <span className="flex items-center gap-1.5 font-semibold text-[var(--ink)]"><Flame size={15} className="text-[var(--accent)]" aria-hidden="true" />Most worked: {summary.topMuscle}</span>}
         </div>
 
-        {summary.muscles.length > 0 ? (
+        {summary.cardio ? (
+          <div className="glass-card mt-4 rounded-2xl px-4 py-3">
+            <p className="text-sm font-bold">{summary.cardio.activityName}</p>
+            <p className="mt-1 text-sm text-[var(--n-600)]">{formatCardioSummary(summary.cardio)}{cardioDerived(summary.cardio).map(item => ` · ${item.value}`).join('')}</p>
+          </div>
+        ) : summary.muscles.length > 0 ? (
           <div className="mt-4">
             <p className="mb-2 text-xs font-bold uppercase tracking-[0.1em] text-[var(--n-600)]">Volume by muscle group</p>
             <div className="flex flex-col gap-2.5">

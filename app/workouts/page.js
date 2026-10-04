@@ -7,6 +7,8 @@ import { getWorkoutDays, getWorkoutLogs, saveWorkoutDays, saveWorkoutLog } from 
 import { useWorkoutSession } from '@/lib/workoutSessionContext'
 import WorkoutDay from '@/components/WorkoutDay'
 import { buildLogExercises } from '@/lib/sessionMath'
+import CardioSheet from '@/components/CardioSheet'
+import { buildCardioLog, newCardio } from '@/lib/cardio'
 import AddExerciseSheet from '@/components/library/AddExerciseSheet'
 import ProgramsSheet from '@/components/ProgramsSheet'
 import { Plus } from 'lucide-react'
@@ -16,6 +18,7 @@ export default function WorkoutsPage() {
   const { session: workoutSession, loading: sessionLoading, startSession, endSession, registerEndHandler } = useWorkoutSession()
   const router = useRouter()
   const [days, setDays] = useState([])
+  const [cardioOpen, setCardioOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [workoutLogs, setWorkoutLogs] = useState([])
@@ -91,6 +94,9 @@ export default function WorkoutsPage() {
 
   const handleAddDay = () => setDays(previous => [...previous, { id: Date.now(), name: 'New Day', isCollapsed: false, isStarted: false, exercises: [] }])
 
+  const handleAddCardio = activity => setDays(previous => [...previous, { id: Date.now(), name: activity.name, type: 'cardio', cardio: newCardio(activity.id), isCollapsed: false, isStarted: false, exercises: [] }])
+  const handleUpdateDay = (dayId, patch) => setDays(previous => previous.map(day => day.id === dayId ? { ...day, ...patch } : day))
+
   const handleRemoveDay = (dayId) => {
     const removedDay = days.find(day => day.id === dayId)
     setDays(previous => previous.filter(day => day.id !== dayId))
@@ -117,7 +123,7 @@ export default function WorkoutsPage() {
       if (!finalSession) return
       const activeSessionId = finalSession.sessionId ?? finalSession.startedAt
       const loggedExercises = activeDay ? buildLogExercises(activeDay, activeSessionId, finalSession.endedAt) : []
-      await saveWorkoutLog(user.uid, { dayId: activeDay?.id, dayName: activeDay?.name || 'Workout Day', startedAt: finalSession.startedAt, endedAt: finalSession.endedAt, durationMs: finalSession.durationMs, sessionId: activeSessionId, exercises: loggedExercises, ...(activeDay?.note ? { dayNote: activeDay.note } : {}) })
+      await saveWorkoutLog(user.uid, { dayId: activeDay?.id, dayName: activeDay?.name || 'Workout Day', startedAt: finalSession.startedAt, endedAt: finalSession.endedAt, durationMs: finalSession.durationMs, sessionId: activeSessionId, exercises: loggedExercises, ...(activeDay && buildCardioLog(activeDay, finalSession.durationMs) ? { cardio: buildCardioLog(activeDay, finalSession.durationMs) } : {}), ...(activeDay?.note ? { dayNote: activeDay.note } : {}) })
     } catch (error) { console.error('Failed to save workout session or log:', error) }
   }
 
@@ -131,5 +137,5 @@ export default function WorkoutsPage() {
   if (!user) return null
   if (loadError) return <div className="min-h-screen bg-page px-5 py-10 text-center font-dark">Firebase error: {loadError}</div>
 
-  return <><main><h1 className="mb-8 text-3xl text-[var(--ink)]">Workout Tracker</h1><div className="flex flex-col gap-5">{visibleDays.map(day => <WorkoutDay key={day.id} day={day} onDayNameChange={handleDayNameChange} onToggleCollapse={handleToggleDayCollapse} onToggleDayStart={handleToggleDayStart} onRemoveDay={handleRemoveDay} onAddExercise={handleAddExercise} onRemoveExercise={handleRemoveExercise} onReorderExercises={reorderExercises} onSetExercises={handleSetExercises} onDayNoteChange={handleDayNoteChange} onUpdateExercise={handleUpdateExercise} onAddDay={handleAddDay} onViewPrograms={() => setProgramsOpen(true)} homeMode lastCompletedAt={getLastCompletedDate(day.id)} />)}</div><button type="button" onClick={handleAddDay} className="mt-6 w-full border-2 border-dashed border-[var(--divider)] bg-transparent p-3 text-left font-bold"><span className="flex items-center gap-2"><Plus size={17} />Add Day</span></button></main><AddExerciseSheet open={Boolean(addExerciseDayId)} onClose={() => setAddExerciseDayId(null)} dayName={days.find(day => day.id === addExerciseDayId)?.name} onAdd={handleConfirmAddExercise} /><ProgramsSheet open={programsOpen} onClose={() => setProgramsOpen(false)} days={days} /></>
+  return <><main><h1 className="mb-8 text-3xl text-[var(--ink)]">Workout Tracker</h1><div className="flex flex-col gap-5">{visibleDays.map(day => <WorkoutDay key={day.id} day={day} onDayNameChange={handleDayNameChange} onToggleCollapse={handleToggleDayCollapse} onToggleDayStart={handleToggleDayStart} onRemoveDay={handleRemoveDay} onAddExercise={handleAddExercise} onRemoveExercise={handleRemoveExercise} onReorderExercises={reorderExercises} onSetExercises={handleSetExercises} onDayNoteChange={handleDayNoteChange} onUpdateExercise={handleUpdateExercise} onAddDay={handleAddDay} onUpdateDay={handleUpdateDay} onViewPrograms={() => setProgramsOpen(true)} homeMode lastCompletedAt={getLastCompletedDate(day.id)} />)}</div><button type="button" onClick={handleAddDay} className="mt-6 w-full border-2 border-dashed border-[var(--divider)] bg-transparent p-3 text-left font-bold"><span className="flex items-center gap-2"><Plus size={17} />Add Day</span></button><button type="button" onClick={() => setCardioOpen(true)} className="mt-3 w-full border-2 border-dashed border-[var(--divider)] bg-transparent p-3 text-left font-bold"><span className="flex items-center gap-2"><Plus size={17} />Add Cardio Day</span></button></main><CardioSheet open={cardioOpen} onClose={() => setCardioOpen(false)} onPick={handleAddCardio} /><AddExerciseSheet open={Boolean(addExerciseDayId)} onClose={() => setAddExerciseDayId(null)} dayName={days.find(day => day.id === addExerciseDayId)?.name} onAdd={handleConfirmAddExercise} /><ProgramsSheet open={programsOpen} onClose={() => setProgramsOpen(false)} days={days} /></>
 }

@@ -9,6 +9,8 @@ import NoteSheet from './NoteSheet'
 import { completeExerciseState, startExerciseState } from '@/lib/sessionMath'
 import PopoverMenu from './PopoverMenu'
 import Sheet from './Sheet'
+import CardioPanel from './CardioPanel'
+import { getActivity } from '@/lib/cardio'
 import SwapExerciseSheet from './SwapExerciseSheet'
 import ExerciseDetailSheet from './ExerciseDetailSheet'
 import { ChevronDown, ChevronUp, Ellipsis, Layers, LayersPlus, ListChecks, Pencil, Plus, StickyNote, Trash2, X } from 'lucide-react'
@@ -26,6 +28,7 @@ export default function WorkoutDay({
   onReorderExercises,
   onSetExercises,
   onAddDay,
+  onUpdateDay,
   onViewPrograms,
   programCount = 1,
   homeMode = false,
@@ -257,6 +260,7 @@ export default function WorkoutDay({
       {...extra}
     />
   )
+  const isCardio = day.type === 'cardio'
   const workoutMenuItems = [
     onViewPrograms && { section: 'Program' },
     onViewPrograms && { label: 'View Programs', sub: `${programCount} program${programCount === 1 ? '' : 's'}`, icon: Layers, onSelect: onViewPrograms },
@@ -265,8 +269,10 @@ export default function WorkoutDay({
     { section: "Today's workout" },
     { label: 'Rename Workout', icon: Pencil, onSelect: () => { setEditedName(day.name); setIsEditingName(true) } },
     { label: day.note ? 'Edit note' : 'Add note', icon: StickyNote, onSelect: () => setDayNoteOpen(true) },
-    { label: 'Edit Workout', icon: ListChecks, onSelect: () => setIsEditingExercises(true) },
+    !isCardio && { label: 'Edit Workout', icon: ListChecks, onSelect: () => setIsEditingExercises(true) },
     onAddDay && { label: 'Blank Workout', icon: Plus, onSelect: onAddDay },
+    onRemoveDay && !sessionMode && { divider: true },
+    onRemoveDay && !sessionMode && { label: 'Delete workout', icon: Trash2, danger: true, onSelect: () => setShowDeleteModal(true) },
   ].filter(Boolean)
 
   const exerciseCount = day.exercises.length
@@ -376,7 +382,7 @@ export default function WorkoutDay({
             )}
             {day.note && <button type="button" onClick={() => setDayNoteOpen(true)} className="mt-3 flex w-full items-start gap-2 rounded-xl border-0 bg-amber-400/15 px-3 py-2 text-left text-xs text-[var(--ink)]"><StickyNote size={14} className="mt-0.5 shrink-0 text-amber-600" /><span className="min-w-0 whitespace-pre-wrap break-words">{day.note}</span></button>}
             <div className="mt-3 flex flex-wrap gap-5 border-y border-[var(--hairline)] py-2 text-xs font-bold uppercase tracking-wide text-[var(--n-600)]">
-              <span>{exerciseCount} exercises</span><span>{setCount} sets</span><span>Last done {lastCompletedLabel}</span>
+              {isCardio ? <span>{getActivity(day.cardio?.activity).name}</span> : <><span>{exerciseCount} exercises</span><span>{setCount} sets</span></>}<span>Last done {lastCompletedLabel}</span>
             </div>
             <button
               type="button"
@@ -399,7 +405,7 @@ export default function WorkoutDay({
 
         <div className={`overflow-hidden transition-all duration-300 ease-in-out ${day.isCollapsed ? 'max-h-0 opacity-0' : 'max-h-[3000px] opacity-100'}`}>
           <div ref={exerciseScrollRef} className="day-exercise-scroll flex min-h-0 flex-col gap-4 pr-1">
-            {day.exercises.length === 0 ? (
+            {isCardio ? (<CardioPanel day={day} sessionMode={sessionMode} onChange={cardio => onUpdateDay?.(day.id, { cardio })} />) : day.exercises.length === 0 ? (
               <div className="border-y border-[var(--hairline)] py-5 text-center">
                 <p className="font-bold text-[var(--ink)]">No exercises yet</p>
                 <p className="mt-1 text-sm text-[var(--n-600)]">Add your first movement to start this day.</p>

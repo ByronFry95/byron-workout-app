@@ -9,6 +9,8 @@ import TrendLineChart from '@/components/TrendLineChart'
 import { X } from 'lucide-react'
 import StatTiles from '@/components/StatTiles'
 import Segmented from '@/components/Segmented'
+import CustomizeSheet, { CustomizeButton } from '@/components/CustomizeSheet'
+import { useHiddenItems } from '@/lib/displayPrefs'
 
 const MAX_SELECTED_EXERCISES = 5
 
@@ -24,6 +26,8 @@ export default function StatsPage() {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [selectedExercises, setSelectedExercises] = useState([])
   const [loadError, setLoadError] = useState('')
+  const [customizeOpen, setCustomizeOpen] = useState(false)
+  const { isShown, toggle } = useHiddenItems('stats')
 
   useEffect(() => {
     if (authLoading) return
@@ -159,7 +163,7 @@ export default function StatsPage() {
     <>
 
       <main>
-        <h1 className="mb-4 text-3xl font-bold text-slate-800">Stats</h1>
+        <div className="mb-4 flex items-center justify-between"><h1 className="text-3xl font-bold text-slate-800">Stats</h1><CustomizeButton onClick={() => setCustomizeOpen(true)} /></div>
 
         <div className="mb-4"><Segmented options={[{ value: 'body', label: 'Body' }, { value: 'strength', label: 'Strength' }]} value={view} onChange={setView} columns={2} /></div>
 
@@ -167,8 +171,8 @@ export default function StatsPage() {
 
         {view === 'body' ? <section className="mb-8">
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">Body Composition Trend</h2>
-          <StatTiles tiles={[{ label: 'Weight now', value: metricsHistory[0]?.weight ? `${metricsHistory[0].weight}kg` : '--' }, { label: `${timeframe} change`, value: bodyWeightChange === null ? '--' : `${bodyWeightChange > 0 ? '+' : ''}${bodyWeightChange.toFixed(1)}kg` }, { label: 'Body fat now', value: metricsHistory[0]?.bodyFat ? `${metricsHistory[0].bodyFat}%` : '--' }]} />
-          <TrendLineChart series={metricsSeries} height={170} emptyMessage="Log body metrics to see your trend here." />
+          <StatTiles tiles={[{ id: 'weightNow', label: 'Weight now', value: metricsHistory[0]?.weight ? `${metricsHistory[0].weight}kg` : '--' }, { label: `${timeframe} change`, value: bodyWeightChange === null ? '--' : `${bodyWeightChange > 0 ? '+' : ''}${bodyWeightChange.toFixed(1)}kg` }, { id: 'bodyFatNow', label: 'Body fat now', value: metricsHistory[0]?.bodyFat ? `${metricsHistory[0].bodyFat}%` : '--' }].filter(tile => isShown(tile.id))} />
+          <TrendLineChart series={metricsSeries.filter(series => isShown(series.id))} height={170} emptyMessage="Log body metrics to see your trend here." />
         </section> : <section className="mb-8">
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">Strength Trend</h2>
           <div className="mb-3 grid grid-cols-3 gap-px border-2 border-[var(--divider)] bg-[var(--divider)]">
@@ -176,7 +180,7 @@ export default function StatsPage() {
               [`${resolvedSelected[0]?.name || 'Exercise'} top set`, topSet ? `${topSet}kg` : '--'],
               [`${resolvedSelected[0]?.name || 'Exercise'} change`, change === null ? '--' : `${change > 0 ? '+' : ''}${change}kg`],
               [`${resolvedSelected[0]?.name || 'Exercise'} est. 1RM`, estimatedOneRepMax ? `${estimatedOneRepMax.toFixed(1)}kg` : '--'],
-            ].map(([label, value]) => <div key={label} className="bg-[var(--surface)] p-3"><p className="text-xs uppercase text-[var(--n-600)]">{label}</p><p className="num mt-1 text-lg">{value}</p></div>)}
+            ].filter((_, index) => isShown(['topSet', 'strengthChange', 'oneRepMax'][index])).map(([label, value]) => <div key={label} className="bg-[var(--surface)] p-3"><p className="text-xs uppercase text-[var(--n-600)]">{label}</p><p className="num mt-1 text-lg">{value}</p></div>)}
           </div>
           <div className="mb-3 flex gap-2"><button type="button" onClick={() => setPickerOpen(true)} className="min-h-11 flex-1 border-2 border-[var(--divider)] bg-[var(--surface)] px-3 text-left font-bold">{resolvedSelected.length ? `${resolvedSelected.length} exercises selected` : 'Choose exercises'}</button></div>
           <div className="mb-3 flex flex-wrap gap-2">{resolvedSelected.map(exercise => <button key={exercise.id} type="button" onClick={() => toggleExercise(exercise)} className="flex min-h-11 items-center gap-2 border-2 border-[var(--divider)] bg-[var(--surface)] px-3 text-xs font-bold text-[var(--ink)]"><span className="h-0.5 w-4" style={{ backgroundColor: exercise.color }} />{exercise.name}<X size={14} /></button>)}</div>
@@ -185,6 +189,7 @@ export default function StatsPage() {
 
         {view === 'strength' && pickerOpen && <div className="fixed inset-0 z-50 flex items-end bg-black/40" onClick={() => setPickerOpen(false)}><div className="max-h-[80vh] w-full overflow-y-auto border-t-2 border-[var(--divider)] bg-[var(--surface)] p-5" onClick={event => event.stopPropagation()}><div className="mx-auto mb-4 h-1 w-12 bg-[var(--n-500)]" /><h2 className="mb-4 text-xl">Choose exercises</h2><div className="grid grid-cols-1 gap-2 sm:grid-cols-3">{dayColumns.flatMap(day => day.exercises).map(exercise => { const selected = selectedExercises.some(item => item.id === exercise.id); return <button key={exercise.id} type="button" disabled={!exercise.hasHistory} onClick={() => toggleExercise(exercise)} className={`min-h-11 border-2 px-3 text-left text-sm font-bold disabled:opacity-40 ${selected ? 'border-[var(--accent)] bg-[var(--accent-100)]' : 'border-[var(--hairline)] bg-transparent'}`}>{exercise.name}</button> })}</div><button type="button" onClick={() => setPickerOpen(false)} className="mt-5 min-h-11 w-full bg-[var(--ink)] font-bold text-white">DONE</button></div></div>}
 
+      <CustomizeSheet open={customizeOpen} onClose={() => setCustomizeOpen(false)} title="Show / hide" isShown={isShown} onToggle={toggle} groups={[{ title: 'Body tiles', items: [{ id: 'weightNow', label: 'Current weight' }, { id: 'weightChange', label: 'Weight change' }, { id: 'bodyFatNow', label: 'Body fat' }] }, { title: 'Body chart lines', items: [{ id: 'weight', label: 'Weight' }, { id: 'waist', label: 'Waist' }] }, { title: 'Strength tiles', items: [{ id: 'topSet', label: 'Top set' }, { id: 'strengthChange', label: 'Change' }, { id: 'oneRepMax', label: 'Estimated 1RM' }] }]} />
       </main>
     </>
   )

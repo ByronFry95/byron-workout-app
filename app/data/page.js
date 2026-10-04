@@ -6,11 +6,29 @@ import { useAuth } from '@/lib/authContext'
 import { deleteWorkoutLog, getWorkoutLogs, updateWorkoutLog } from '@/lib/firebaseQueries'
 import { formatUKDate } from '@/lib/chartUtils'
 import Sheet from '@/components/Sheet'
+import { formatCardioSummary, cardioDerived } from '@/lib/cardio'
 
 const formatDuration = ms => { const total = Math.floor(Math.max(0, ms || 0) / 60000); return total >= 60 ? `${Math.floor(total / 60)}h ${total % 60}m` : `${total}m` }
 const volume = log => (log.exercises || []).reduce((total, exercise) => total + (exercise.sets || []).reduce((sum, set) => sum + Number(set.weight || 0) * Number(set.reps || 0), 0), 0)
 
-function LogCard({ log, onSave, onDelete }) {
+const sameExercise = (a, b) => String(a.id) === String(b.id) || (a.libraryId && a.libraryId === b.libraryId) || a.name === b.name
+const findPreviousSet = (olderLogs, exercise, set) => {
+  for (const older of olderLogs) {
+    const match = (older.exercises || []).find(candidate => sameExercise(candidate, exercise))
+    if (!match) continue
+    return (match.sets || []).find(candidate => candidate.setNumber === set.setNumber && (candidate.side || 'left') === (set.side || 'left')) || null
+  }
+  return null
+}
+const formatDelta = value => `${value > 0 ? '+' : '-'}${Math.abs(Math.round(value * 100) / 100)}`
+
+function Delta({ current, previous }) {
+  if (previous == null || previous === '' || current === '' || current == null) return null
+  const diff = Number(current) - Number(previous)
+  if (!Number.isFinite(diff) || diff === 0) return null
+  return <span className={`ml-1.5 text-xs font-bold ${diff > 0 ? 'text-emerald-600' : 'text-red-500'}`}>{formatDelta(diff)}</span>
+}
+function LogCard({ log, olderLogs = [], onSave, onDelete }) {
   const [expanded, setExpanded] = useState(false)
   const [editing, setEditing] = useState(null)
   const [draft, setDraft] = useState('')
@@ -20,7 +38,7 @@ function LogCard({ log, onSave, onDelete }) {
     await onSave(log.id, { exercises })
     setEditing(null)
   }
-  return <article className="border-b-2 border-[var(--divider)]"><button type="button" onClick={() => setExpanded(!expanded)} className="grid min-h-16 w-full grid-cols-[1fr_auto_auto] items-center gap-3 text-left"><span><strong className="block text-[var(--ink)]">{log.dayName}</strong><span className="text-sm text-[var(--n-600)]">{formatUKDate(log.startedAt)}</span></span><span className="text-right text-xs uppercase text-[var(--n-600)]">{formatDuration(log.durationMs)}<br />{Math.round(volume(log))}kg volume</span><span className="text-[var(--accent)]">{expanded ? '−' : '+'}</span></button>{expanded && <div className="border-t border-[var(--hairline)] py-3">{(log.exercises || []).map((exercise, exerciseIndex) => <div key={exercise.id} className="border-b border-[var(--hairline)] py-3"><h3 className="font-bold">{exercise.name}</h3>{exercise.sets.map((set, setIndex) => <div key={set.setNumber} className="grid grid-cols-[4rem_1fr_1fr] gap-2 py-1 text-sm"><span className="text-[var(--n-600)]">Set {set.setNumber}</span>{['weight', 'reps'].map(field => editing?.exerciseIndex === exerciseIndex && editing?.setIndex === setIndex && editing.field === field ? <input key={field} autoFocus type="text" inputMode="decimal" value={draft} onChange={event => setDraft(event.target.value)} onBlur={() => updateValue(exerciseIndex, setIndex, field, draft)} className="min-h-11 border-2 border-[var(--accent)] bg-transparent px-2" /> : <button key={field} type="button" onClick={() => { setEditing({ exerciseIndex, setIndex, field }); setDraft(set[field]) }} className="min-h-11 border-b border-[var(--hairline)] text-left num">{set[field]}{field === 'weight' ? 'kg' : ' reps'}</button>)}</div>)}</div>)}<button type="button" onClick={() => setDeleteOpen(true)} className="mt-3 min-h-11 text-sm font-bold text-[var(--accent)]">DELETE LOG</button><Sheet open={deleteOpen} onClose={() => setDeleteOpen(false)} title="Delete workout log?"><p className="text-sm text-[var(--n-600)]">This removes this session from your raw data history.</p><button type="button" onClick={() => { onDelete(log.id); setDeleteOpen(false) }} className="mt-5 min-h-11 w-full bg-[var(--accent)] font-bold text-white">DELETE</button></Sheet></div>}</article>
+  return <article className="border-b-2 border-[var(--divider)]"><button type="button" onClick={() => setExpanded(!expanded)} className="grid min-h-16 w-full grid-cols-[1fr_auto_auto] items-center gap-3 text-left"><span><strong className="block text-[var(--ink)]">{log.dayName}</strong><span className="text-sm text-[var(--n-600)]">{formatUKDate(log.startedAt)}</span></span><span className="text-right text-xs uppercase text-[var(--n-600)]">{formatDuration(log.durationMs)}<br />{log.cardio ? log.cardio.activityName : `${Math.round(volume(log))}kg volume`}</span><span className="text-[var(--accent)]">{expanded ? '−' : '+'}</span></button>{expanded && <div className="border-t border-[var(--hairline)] py-3">{log.cardio && <div className="border-b border-[var(--hairline)] py-3"><h3 className="font-bold">{log.cardio.activityName}</h3><p className="mt-1 text-sm text-[var(--n-600)]">{formatCardioSummary(log.cardio)}{cardioDerived(log.cardio).map(item => `  ·  ${item.label} ${item.value}`).join('')}</p></div>}{(log.exercises || []).map((exercise, exerciseIndex) => <div key={exercise.id} className="border-b border-[var(--hairline)] py-3"><h3 className="font-bold">{exercise.name}</h3>{exercise.sets.map((set, setIndex) => <div key={`${setIndex}-${set.side || 'l'}`} className="grid grid-cols-[4rem_1fr_1fr] gap-2 py-1 text-sm"><span className="text-[var(--n-600)]">Set {set.setNumber}</span>{['weight', 'reps'].map(field => editing?.exerciseIndex === exerciseIndex && editing?.setIndex === setIndex && editing.field === field ? <input key={field} autoFocus type="text" inputMode="decimal" value={draft} onChange={event => setDraft(event.target.value)} onBlur={() => updateValue(exerciseIndex, setIndex, field, draft)} className="min-h-11 border-2 border-[var(--accent)] bg-transparent px-2" /> : <button key={field} type="button" onClick={() => { setEditing({ exerciseIndex, setIndex, field }); setDraft(set[field]) }} className="min-h-11 border-b border-[var(--hairline)] text-left num">{set[field]}{field === 'weight' ? 'kg' : ' reps'}<Delta current={set[field]} previous={findPreviousSet(olderLogs, exercise, set)?.[field]} /></button>)}</div>)}</div>)}<button type="button" onClick={() => setDeleteOpen(true)} className="mt-3 min-h-11 text-sm font-bold text-[var(--accent)]">DELETE LOG</button><Sheet open={deleteOpen} onClose={() => setDeleteOpen(false)} title="Delete workout log?"><p className="text-sm text-[var(--n-600)]">This removes this session from your raw data history.</p><button type="button" onClick={() => { onDelete(log.id); setDeleteOpen(false) }} className="mt-5 min-h-11 w-full bg-[var(--accent)] font-bold text-white">DELETE</button></Sheet></div>}</article>
 }
 
 export default function DataPage() {
@@ -38,5 +56,5 @@ export default function DataPage() {
   const loadMore = async () => { const next = await getWorkoutLogs(user.uid, pageSize, logs.at(-1)?.startedAt); setLogs(previous => [...previous, ...next]); setHasMore(next.length === pageSize) }
   if (authLoading || loading) return <div className="min-h-screen bg-page px-5 py-10 text-center font-dark">Loading data...</div>
   if (!user) return null
-  return <><main><h1 className="mb-6 text-3xl text-[var(--ink)]">Workout Data</h1>{loadError && <p className="text-[var(--accent-700)]">{loadError}</p>}{logs.length === 0 ? <div className="border-y border-[var(--hairline)] py-6"><p className="font-bold">No workout logs yet</p><p className="mt-1 text-sm text-[var(--n-600)]">Completed sessions will appear here.</p></div> : Object.entries(groupedLogs).map(([month, monthLogs]) => <section key={month} className="mb-6"><h2 className="sticky top-0 border-b-2 border-[var(--divider)] bg-[var(--bg)] py-2 text-xs font-bold tracking-[0.12em]">{month}</h2>{monthLogs.map(log => <LogCard key={log.id} log={log} onSave={save} onDelete={remove} />)}</section>)}{hasMore && <button type="button" onClick={loadMore} className="min-h-11 w-full border-2 border-[var(--divider)] font-bold text-[var(--ink)]">LOAD MORE</button>}</main></>
+  return <><main><h1 className="mb-6 text-3xl text-[var(--ink)]">Workout Data</h1>{loadError && <p className="text-[var(--accent-700)]">{loadError}</p>}{logs.length === 0 ? <div className="border-y border-[var(--hairline)] py-6"><p className="font-bold">No workout logs yet</p><p className="mt-1 text-sm text-[var(--n-600)]">Completed sessions will appear here.</p></div> : Object.entries(groupedLogs).map(([month, monthLogs]) => <section key={month} className="mb-6"><h2 className="sticky top-0 border-b-2 border-[var(--divider)] bg-[var(--bg)] py-2 text-xs font-bold tracking-[0.12em]">{month}</h2>{monthLogs.map(log => <LogCard key={log.id} log={log} olderLogs={logs.slice(logs.indexOf(log) + 1)} onSave={save} onDelete={remove} />)}</section>)}{hasMore && <button type="button" onClick={loadMore} className="min-h-11 w-full border-2 border-[var(--divider)] font-bold text-[var(--ink)]">LOAD MORE</button>}</main></>
 }

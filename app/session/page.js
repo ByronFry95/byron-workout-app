@@ -13,6 +13,7 @@ import { useNavTitle } from '@/components/NavShell'
 import PopoverMenu from '@/components/PopoverMenu'
 import NoteSheet from '@/components/NoteSheet'
 import FinishWorkoutSheet from '@/components/FinishWorkoutSheet'
+import { buildCardioLog } from '@/lib/cardio'
 import { buildLogExercises, countSets, summarizeSession } from '@/lib/sessionMath'
 
 export default function SessionPage() {
@@ -82,6 +83,7 @@ export default function SessionPage() {
     setDays(previous => previous.map(day => day.id === dayId ? { ...day, exercises: day.exercises.filter(exercise => exercise.id !== exerciseId) } : day))
   }
 
+  const handleUpdateDay = (dayId, patch) => setDays(previous => previous.map(day => day.id === dayId ? { ...day, ...patch } : day))
   const handleDayNoteChange = (id, note) => setDays(previous => previous.map(day => day.id === id ? { ...day, note } : day))
   const setExercises = (dayId, updater) => setDays(previous => previous.map(day => day.id === dayId ? { ...day, exercises: updater(day.exercises) } : day))
 
@@ -104,6 +106,7 @@ export default function SessionPage() {
       durationMs: finalSession.durationMs,
       sessionId: activeSessionId,
       exercises: loggedExercises,
+      ...(buildCardioLog(activeDay, finalSession.durationMs) ? { cardio: buildCardioLog(activeDay, finalSession.durationMs) } : {}),
       ...(notes ? { notes } : {}),
       ...(activeDay.note ? { dayNote: activeDay.note } : {}),
     })
@@ -121,7 +124,7 @@ export default function SessionPage() {
 
   const activeSessionId = session.sessionId ?? session.startedAt
   const progress = countSets(activeDay, activeSessionId)
-  const summary = finishOpen ? summarizeSession(activeDay, activeSessionId, Date.now() - session.startedAt) : null
+  const summary = finishOpen ? { ...summarizeSession(activeDay, activeSessionId, Date.now() - session.startedAt), cardio: buildCardioLog(activeDay, Date.now() - session.startedAt) } : null
 
   return (
     <>
@@ -160,6 +163,7 @@ export default function SessionPage() {
           onToggleCollapse={() => {}}
           onToggleDayStart={(_, started) => { if (!started) handleEndSession() }}
           onRemoveDay={() => {}}
+          onUpdateDay={handleUpdateDay}
           onAddExercise={() => setAddExerciseOpen(true)}
           onRemoveExercise={removeExercise} onReorderExercises={reorderExercises}
           onUpdateExercise={(dayId, exerciseId, updated) => updateExercise(dayId, exerciseId, updated)}
